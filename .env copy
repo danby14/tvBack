@@ -1,0 +1,2 @@
+DB_CONNECTION=mongodb+srv://USERNAME:PASSWORD@COLLECTION_NAME_GOES_HERE.mongodb.net/db0?retryWrites=true&w=majority
+TOKEN_SECRET = CHANGE_this_TO_some_TOKEN_you_LIKE
