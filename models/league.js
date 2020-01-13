@@ -20,7 +20,15 @@ const LeagueSchema = mongoose.Schema(
         id: false,
         memberId: { type: String },
         username: { type: String },
-        predictions: { type: Array }
+        // predictions: [
+        //   {
+        //     _id: false,
+        //     id: false,
+        //     network: { type: String, require: true },
+        //     shows: { type: Array, require: true }
+        //   }
+        // ]
+        predictions: [{ _id: false, id: false, network: Number, shows: Array }]
       }
     ]
     // startDate: { type: Date },

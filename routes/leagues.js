@@ -10,7 +10,7 @@ const List = require('../models/monthlyList');
 const verifyToken = require('../middleware/verifyToken');
 
 // require authorization
-// router.use(verifyToken);
+router.use(verifyToken);
 
 // Get list of all leagues (for testing)
 router.get('/', async (req, res, next) => {
@@ -181,7 +181,7 @@ router.get('/:lid', async (req, res, next) => {
 
 // Make predictions
 router.patch('/:lid/predictions', async (req, res, next) => {
-  const { userId, predictions } = req.body;
+  const { userId, predictions, currentNetwork } = req.body;
   const leagueId = req.params.lid;
 
   let league;
@@ -221,16 +221,32 @@ router.patch('/:lid/predictions', async (req, res, next) => {
     return next(error);
   }
 
-  leagueMember.predictions = predictions;
+  // leagueMember.predictions = predictions;
 
   try {
-    // league.members.updateOne(
-    //   { memberId: user.id },
-    //   { $set: { predictions: predictions } },
-    //   { upsert: true }
-    // );
-    // leagueMember.predictions.updateOne(($set: { Predictions: predictions }));
-    // await league.updateOne();
+    //check if network is in this members prediction array
+    const checker = leagueMember.predictions.find(
+      ({ network }) => network === currentNetwork
+    );
+    if (!checker) {
+      // add individual network predictions if no network found
+      leagueMember.predictions = [...leagueMember.predictions, predictions];
+      // sort networks if predictions were made out of order by user
+      leagueMember.predictions.sort((a, b) => {
+        return a.network - b.network;
+      });
+    } else {
+      //update network predictions if they exist already, by replacing the old ones with an updated copy
+      let predictionsCopy = [...leagueMember.predictions];
+      let filteredDataSource = predictionsCopy.filter(item => {
+        if (item.network === currentNetwork) {
+          item.shows = predictions.shows;
+        }
+        return item;
+      });
+      leagueMember.predictions = filteredDataSource;
+    }
+
     await league.save();
   } catch (err) {
     const error = new HttpError('Something went wrong', 500);
