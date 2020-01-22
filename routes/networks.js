@@ -12,4 +12,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+//Update a network
+router.post('/new', async (req, res) => {
+  const { network, shows } = req.body;
+
+  const newNetwork = new Network({
+    network: network,
+    shows: shows
+  });
+
+  try {
+    const savedNetwork = await newNetwork.save();
+    res.json(savedNetwork);
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
 module.exports = router;

@@ -44,4 +44,16 @@ router.post('/autoUpdate', async (req, res) => {
   }
 });
 
+//Get back all the networks and find a show to update
+router.get('/result/:show', async (req, res) => {
+  const show = req.params.show;
+  try {
+    const finder = await MonthlyList.networks.find();
+    res.json(finder);
+    console.log(show);
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
 module.exports = router;
