@@ -31,13 +31,19 @@ router.post('/create', async (req, res, next) => {
   const leagueExist = await League.findOne({ leagueName: req.body.leagueName });
   if (leagueExist) return res.status(400).send('League Name Not Available');
 
-  let listToUse;
   // find most recent network bracket to use
+  let listToUse;
   try {
     listToUse = await List.findOne().sort({ updated: -1 });
   } catch (err) {
     res.json({ message: err.message });
   }
+
+  // give user a default prediction of 0 for all shows in all networks
+  // so react doesn't complain about undefined predictions when viewing standings in frontend
+  const defaultPredictions = listToUse.networks.map((network, i) => {
+    return { shows: network.shows.map(show => 0), network: i };
+  });
 
   let user;
   try {
@@ -55,7 +61,11 @@ router.post('/create', async (req, res, next) => {
     password,
     listUsed: listToUse.id,
     // bracketEdits: req.body.bracketEdits,
-    members: { memberId: req.userData.userId, username: user.username },
+    members: {
+      memberId: req.userData.userId,
+      username: user.username,
+      predictions: defaultPredictions
+    },
     // startDate: req.body.startDate,
     commissioner: { userId: req.userData.userId, username: user.username }
   });
@@ -142,10 +152,20 @@ router.patch('/:lid', async (req, res, next) => {
     return next(error);
   }
 
+  // give user a default prediction of 0 for all shows in all networks
+  // so react doesn't complain about undefined predictions when viewing standings in frontend
+  const defaultPredictions = league.members[0].predictions.map((network, i) => {
+    return { shows: network.shows.map(show => 0), network: i };
+  });
+
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
-    league.members.push({ memberId: userId, username: user.username });
+    league.members.push({
+      memberId: userId,
+      username: user.username,
+      predictions: defaultPredictions
+    });
     await league.save({ session: sess });
     user.leagues.push({ leagueId: leagueId, leagueName: league.leagueName });
     await user.save({ session: sess });

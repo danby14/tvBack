@@ -42,7 +42,7 @@ router.post('/register', async (req, res) => {
   let token;
   try {
     token = jwt.sign(
-      { user: user.id, email: user.email },
+      { user: user.id, username: user.username },
       process.env.TOKEN_SECRET,
       { expiresIn: '1h' }
     );
@@ -53,6 +53,7 @@ router.post('/register', async (req, res) => {
   res.status(201).json({
     user: user.id,
     email: user.email,
+    username: user.username,
     token: token,
     leagues: user.leagues
   });
@@ -75,7 +76,7 @@ router.post('/login', async (req, res) => {
   let token;
   try {
     token = jwt.sign(
-      { user: user.id, email: user.email },
+      { user: user.id, username: user.username },
       process.env.TOKEN_SECRET,
       {
         expiresIn: '1h'
@@ -90,6 +91,7 @@ router.post('/login', async (req, res) => {
   res.status(201).json({
     user: user.id,
     email: user.email,
+    username: user.username,
     token: token,
     leagues: user.leagues
   });
