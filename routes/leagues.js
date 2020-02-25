@@ -49,11 +49,9 @@ router.post('/create', async (req, res, next) => {
   try {
     user = await User.findById(req.userData.userId);
   } catch (err) {
-    const error = new HttpError(
-      'Creating league failed, please try again1',
-      500
-    );
-    return next(error);
+    return next(res.status(500).send('Creating league failed, please try again1'));
+    // const error = new HttpError('Creating league failed, please try again1', 500);
+    // return next(error);
   }
 
   const createdLeague = new League({
@@ -71,8 +69,9 @@ router.post('/create', async (req, res, next) => {
   });
 
   if (!user) {
-    const error = new HttpError('Could not find user for provided id', 404);
-    return next(error);
+    return next(res.status(404).send('Could not find user for provided id'));
+    // const error = new HttpError('Could not find user for provided id', 404);
+    // return next(error);
   }
 
   try {
@@ -84,10 +83,7 @@ router.post('/create', async (req, res, next) => {
     await user.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
-    const error = new HttpError(
-      `Creating league failed, please try again`,
-      500
-    );
+    const error = new HttpError(`Creating league failed, please try again`, 500);
     res.json({ message: err.message });
     return next(error);
   }
@@ -95,7 +91,6 @@ router.post('/create', async (req, res, next) => {
 });
 
 // Join a league
-// 1. determine where/when to add predictions and add that bracketId to user.brackets (maybe a separate patch/post to :lid)
 router.patch('/:lid', async (req, res, next) => {
   const { leaguePassword } = req.body;
   const { userId } = req.userData;
@@ -103,31 +98,31 @@ router.patch('/:lid', async (req, res, next) => {
 
   let league;
   try {
+    //league has to be the exact length of characters as all other leagues to not catch here
     league = await League.findById(leagueId);
   } catch (err) {
-    const error = new HttpError('Something went wrong', 500);
-    return next(error);
+    return next(res.status(500).send('Request failed, possibly due to an inalid id length'));
+    // res.json({ message: err });
+    // const error = new HttpError('Something went wrong / Invalid League ID Length', 500);
+    // return next(error);
   }
 
   if (!league) {
-    const error = new HttpError('Could not find league for provided id', 404);
-    return next(error);
+    return next(res.status(404).send('Could not find league for provided id'));
+    // const error = new HttpError('Could not find league for provided id', 404);
+    // return next(error);
   }
 
   if (leaguePassword !== league.password) {
-    const error = new HttpError(
-      'You do not have access to join this league, password',
-      401
-    );
-    return next(error);
+    return next(res.status(401).send('Wrong password'));
+    // const error = new HttpError('You do not have access to join this league, password', 401);
+    // return next(error);
   }
 
   if (league.members.length > 9) {
-    const error = new HttpError(
-      'Could not add new member. League is full.',
-      401
-    );
-    return next(error);
+    return next(res.status(401).send('Could not add new member. League is full.'));
+    // const error = new HttpError('Could not add new member. League is full.', 401);
+    // return next(error);
   }
 
   let user;
@@ -135,21 +130,21 @@ router.patch('/:lid', async (req, res, next) => {
   try {
     user = await User.findById(userId);
   } catch (err) {
-    const error = new HttpError(
-      'Joining league failed, please try again1',
-      500
-    );
-    return next(error);
+    return next(res.status(500).send('Joining league failed, please try again.'));
+    // const error = new HttpError('Joining league failed, please try again1', 500);
+    // return next(error);
   }
 
   if (!user) {
-    const error = new HttpError('Could not find user for provided id', 404);
-    return next(error);
+    return next(res.status(404).send('Could not find user for provided id.'));
+    // const error = new HttpError('Could not find user for provided id', 404);
+    // return next(error);
   }
 
   if (league.members.find(({ memberId }) => memberId === user.id)) {
-    const error = new HttpError('User has already joined this league', 404);
-    return next(error);
+    return next(res.status(404).send('User has already joined this league.'));
+    // const error = new HttpError('User has already joined this league.', 404);
+    // return next(error);
   }
 
   // give user a default prediction of 0 for all shows in all networks
@@ -172,7 +167,7 @@ router.patch('/:lid', async (req, res, next) => {
     await sess.commitTransaction();
   } catch (err) {
     res.json({ message: err.message });
-    const error = new HttpError('Something went wrong', 500);
+    const error = new HttpError('Something went wrong2', 500);
     return next(error);
   }
 
@@ -220,10 +215,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   try {
     user = await User.findById(userId);
   } catch (err) {
-    const error = new HttpError(
-      'Joining league failed, please try again1',
-      500
-    );
+    const error = new HttpError('Joining league failed, please try again1', 500);
     return next(error);
   }
 
@@ -232,9 +224,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
     return next(error);
   }
 
-  let leagueMember = league.members.find(
-    ({ memberId }) => memberId === user.id
-  );
+  let leagueMember = league.members.find(({ memberId }) => memberId === user.id);
 
   if (!leagueMember) {
     const error = new HttpError('Not a member of this league', 404);
@@ -245,9 +235,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
 
   try {
     //check if network is in this members prediction array
-    const checker = leagueMember.predictions.find(
-      ({ network }) => network === currentNetwork
-    );
+    const checker = leagueMember.predictions.find(({ network }) => network === currentNetwork);
     if (!checker) {
       // add individual network predictions if no network found
       leagueMember.predictions = [...leagueMember.predictions, predictions];

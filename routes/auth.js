@@ -11,11 +11,12 @@ router.post('/register', async (req, res) => {
 
   //Check if user is already in the database
   const userExist = await User.findOne({ username: req.body.username });
-  if (userExist) return res.status(400).send('Username Not Available');
+  if (userExist) return res.status(400).send('Username not available');
 
   //Check if email is already in the database
   const emailExist = await User.findOne({ email: req.body.email });
-  if (emailExist) return res.status(400).send('Email Already Exists');
+  if (emailExist)
+    return res.status(400).send('This email already has an account associated with it');
 
   //Hash Passwords
   const salt = await bcrypt.genSalt(10);
@@ -41,11 +42,9 @@ router.post('/register', async (req, res) => {
   //Create and assign a jwt
   let token;
   try {
-    token = jwt.sign(
-      { user: user.id, username: user.username },
-      process.env.TOKEN_SECRET,
-      { expiresIn: '1h' }
-    );
+    token = jwt.sign({ user: user.id, username: user.username }, process.env.TOKEN_SECRET, {
+      expiresIn: '1h'
+    });
   } catch (err) {
     console.log(err);
   }
@@ -70,18 +69,14 @@ router.post('/login', async (req, res) => {
   if (!user) return res.status(400).send('Incorrect username or password');
   //Password check
   const validPass = await bcrypt.compare(req.body.password, user.password);
-  if (!validPass) return res.status(400).send('Invalid Password');
+  if (!validPass) return res.status(400).send('Invalid username or password');
 
   //Create and assign a jwt
   let token;
   try {
-    token = jwt.sign(
-      { user: user.id, username: user.username },
-      process.env.TOKEN_SECRET,
-      {
-        expiresIn: '1h'
-      }
-    );
+    token = jwt.sign({ user: user.id, username: user.username }, process.env.TOKEN_SECRET, {
+      expiresIn: '1h'
+    });
   } catch (err) {
     console.log(err);
   }
