@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const User = require('../models/user');
+const Dummy = require('../models/dummy');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../validation');
@@ -106,7 +107,9 @@ router.get('/register', async (req, res) => {
 router.get('/:uid', async (req, res, next) => {
   const userId = req.params.uid;
   try {
-    const user = await User.findById(userId).select('-password');
+    const user = await User.findById(userId)
+      .select('-password')
+      .populate('leagues');
     res.json(user);
   } catch (err) {
     res.json({ message: err });
@@ -117,8 +120,42 @@ router.get('/:uid', async (req, res, next) => {
 router.get('/:uid/leagues', async (req, res, next) => {
   const userId = req.params.uid;
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate('leagues');
     res.json(user.leagues);
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
+// Make a dummy (for testing)
+router.post('/tester', async (req, res, next) => {
+  //Create a New Dummy
+  const dummy = new Dummy({
+    name: req.body.name,
+    userId: req.body.userId,
+    leagues: req.body.leagues
+  });
+  try {
+    await dummy.save();
+  } catch (err) {
+    res.status(400).send(err);
+  }
+
+  res.status(201).json({
+    dummy: dummy.id,
+    name: dummy.name,
+    user: dummy.userId,
+    leagues: dummy.leagues
+  });
+});
+
+// Get list of dummys with league info populated (for testing)
+router.get('/tester/:did', async (req, res, next) => {
+  const dummyId = req.params.did;
+  try {
+    const dummy = await Dummy.findById(dummyId);
+    // const dummy = await Dummy.findById(dummyId).populate('leagues');
+    res.json(dummy);
   } catch (err) {
     res.json({ message: err });
   }

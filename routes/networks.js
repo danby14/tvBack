@@ -15,7 +15,6 @@ router.get('/', async (req, res) => {
 //Update a network
 router.post('/new', async (req, res) => {
   const { network, shows } = req.body;
-
   const newNetwork = new Network({
     network: network,
     shows: shows

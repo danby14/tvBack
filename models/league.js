@@ -2,14 +2,17 @@ const mongoose = require('mongoose');
 
 const LeagueSchema = mongoose.Schema(
   {
-    commissioner: {
-      userId: {
-        type: mongoose.Types.ObjectId,
-        required: true,
-        ref: 'User'
-      },
-      username: { type: String }
-    },
+    commissioner: [{ type: mongoose.Types.ObjectId, required: true, ref: 'User' }],
+    // commissioner: {
+    //   userId: [
+    //     {
+    //       type: mongoose.Types.ObjectId,
+    //       required: true,
+    //       ref: 'User'
+    //     }
+    //   ],
+    //   username: { type: String }
+    // },
     leagueName: { type: String, required: true, unique: false },
     password: { type: String, required: true, minlength: 6 },
     listUsed: { type: String, required: true },
@@ -18,8 +21,9 @@ const LeagueSchema = mongoose.Schema(
       {
         _id: false,
         id: false,
-        memberId: { type: String },
-        username: { type: String },
+        memberId: [{ type: mongoose.Types.ObjectId, required: true, ref: 'User' }],
+        // memberId: { type: String },
+        // username: { type: String },
         // predictions: [
         //   {
         //     _id: false,
@@ -38,4 +42,4 @@ const LeagueSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Leagues', LeagueSchema);
+module.exports = mongoose.model('League', LeagueSchema);

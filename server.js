@@ -6,16 +6,16 @@ mongoose.set('useCreateIndex', true);
 const cors = require('cors');
 const port = 5000;
 
+//Middlewares
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cors());
+
 //Import Routes
 const authRoute = require('./routes/auth');
 const leaguesRoute = require('./routes/leagues');
 const networksRoute = require('./routes/networks');
 const monthlyListsRoute = require('./routes/monthlyLists');
-
-//Middlewares
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(cors());
 
 //Route Middlewares
 app.use('/user', authRoute);

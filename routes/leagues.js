@@ -65,7 +65,8 @@ router.post('/create', async (req, res, next) => {
       predictions: defaultPredictions
     },
     // startDate: req.body.startDate,
-    commissioner: { userId: req.userData.userId, username: user.username }
+    commissioner: req.userData.userId
+    // commissioner: { userId: req.userData.userId, userName: user.username }
   });
 
   if (!user) {
@@ -78,8 +79,8 @@ router.post('/create', async (req, res, next) => {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     await createdLeague.save({ session: sess });
-    // user.leagues.push(createdLeague);
-    user.leagues.push({ leagueId: createdLeague, leagueName: leagueName });
+    user.leagues.push(createdLeague);
+    // user.leagues.push({ leagueId: createdLeague, leagueName: leagueName });
     await user.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
@@ -158,11 +159,12 @@ router.patch('/:lid', async (req, res, next) => {
     sess.startTransaction();
     league.members.push({
       memberId: userId,
-      username: user.username,
+      // username: user.username,
       predictions: defaultPredictions
     });
     await league.save({ session: sess });
-    user.leagues.push({ leagueId: leagueId, leagueName: league.leagueName });
+    user.leagues.push(leagueId);
+    // user.leagues.push({ leagueId: leagueId, leagueName: league.leagueName });
     await user.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
@@ -178,21 +180,12 @@ router.patch('/:lid', async (req, res, next) => {
 router.get('/:lid', async (req, res, next) => {
   const leagueId = req.params.lid;
   try {
-    const league = await League.findById(leagueId);
+    const league = await League.findById(leagueId).populate('members.memberId', 'username');
     res.json(league);
   } catch (err) {
     res.json({ message: err });
   }
 });
-
-// router.get('/', async (req, res, next) => {
-//   try {
-//     const leagues = await League.find();
-//     res.json(leagues);
-//   } catch (err) {
-//     res.json({ message: err });
-//   }
-// });
 
 // Make predictions
 router.patch('/:lid/predictions', async (req, res, next) => {
@@ -201,7 +194,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
 
   let league;
   try {
-    league = await League.findById(leagueId);
+    league = await League.findById(leagueId).populate('members.memberId');
   } catch (err) {
     const error = new HttpError('Something went wrong', 500);
     return next(error);
@@ -224,7 +217,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
     return next(error);
   }
 
-  let leagueMember = league.members.find(({ memberId }) => memberId === user.id);
+  let leagueMember = league.members.find(({ memberId }) => memberId[0].id === user.id);
 
   if (!leagueMember) {
     const error = new HttpError('Not a member of this league', 404);
@@ -263,6 +256,90 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   }
 
   res.status(200).json({ league: league.toObject({ getters: true }) });
+});
+
+// delete a league
+router.delete('/:lid', async (req, res, next) => {
+  const leagueId = req.params.lid;
+
+  let league;
+  let leagueTest;
+  try {
+    console.log('leagueId', leagueId);
+    // leagueTest = await League.findById(leagueId)
+    // console.log('leagueTest', leagueTest.commissioner.userId);
+    league = await League.findById(leagueId).populate('commissioner');
+  } catch (err) {
+    const error = new HttpError('Could not find league', 500);
+    return next(error);
+  }
+
+  if (!league) {
+    const error = new HttpError('Could not find league for this id', 404);
+    return next(error);
+  }
+
+  if (league.commissioner.userId !== req.userData.userId) {
+    const error = new HttpError('You are not allowed to delete this place', 401);
+    return next(error);
+  }
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await league.remove({ session: sess });
+    league.commissioner.leagues.pull(league);
+    await league.creator.save({ session: sess });
+    await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError('Could not delete league', 500);
+    return next(error);
+  }
+
+  res.status(200).json({ message: 'place removed' });
+});
+
+// test delete a league
+router.get('/test/:lid', async (req, res, next) => {
+  const leagueId = req.params.lid;
+
+  let league;
+  let leagueTest;
+  try {
+    league = await League.findById(leagueId).populate('commissioner', 'username');
+    // league = await League.findById(leagueId).populate('commissioner.userId', 'username');
+    console.log(league);
+  } catch (err) {
+    const error = new HttpError('Could not find league', 500);
+    return next(error);
+  }
+
+  if (!league) {
+    const error = new HttpError('Could not find league for this id', 404);
+    return next(error);
+  }
+
+  console.log('user id', league.commissioner[0].id);
+  console.log('sent user id', req.body.userId);
+
+  if (league.commissioner[0].id !== req.body.userId) {
+    const error = new HttpError('You are not allowed to delete this place', 401);
+    return next(error);
+  }
+
+  try {
+    console.log('you got this far'); // const sess = await mongoose.startSession();
+    // sess.startTransaction();
+    // await league.remove({ session: sess });
+    // league.commissioner.leagues.pull(league);
+    // await league.creator.save({ session: sess });
+    // await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError('Could not delete league', 500);
+    return next(error);
+  }
+
+  res.status(200).json({ message: league });
 });
 
 module.exports = router;

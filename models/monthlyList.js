@@ -5,4 +5,4 @@ const MonthlyListSchema = mongoose.Schema({
   networks: Array
 });
 
-module.exports = mongoose.model('MonthlyLists', MonthlyListSchema);
+module.exports = mongoose.model('MonthlyList', MonthlyListSchema);
