@@ -142,7 +142,7 @@ router.patch('/:lid', async (req, res, next) => {
     // return next(error);
   }
 
-  if (league.members.find(({ memberId }) => memberId === user.id)) {
+  if (league.members.find(({ memberId }) => memberId[0].toString() === user.id)) {
     return next(res.status(404).send('User has already joined this league.'));
     // const error = new HttpError('User has already joined this league.', 404);
     // return next(error);
@@ -169,8 +169,9 @@ router.patch('/:lid', async (req, res, next) => {
     await sess.commitTransaction();
   } catch (err) {
     res.json({ message: err.message });
-    const error = new HttpError('Something went wrong2', 500);
-    return next(error);
+    return next(res.status(500).send('Something went wrong2.'));
+    // const error = new HttpError('Something went wrong2', 500);
+    // return next(error);
   }
 
   res.status(200).json({ league: league.toObject({ getters: true }) });
