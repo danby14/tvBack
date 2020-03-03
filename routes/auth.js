@@ -127,6 +127,30 @@ router.get('/:uid/leagues', async (req, res, next) => {
   }
 });
 
+// Delete a league from a user (for testing)
+router.delete('/:uid/leagues/remove', async (req, res, next) => {
+  const userId = req.params.uid;
+  const { lg } = req.body;
+
+  let user;
+  try {
+    user = await User.findById(userId);
+    // res.status(200).json({ userInputLg: lg, lgFrmUserDb: user.leagues });
+    // res.json(user.leagues);
+  } catch (err) {
+    res.json({ message: err });
+  }
+
+  try {
+    // console.log('user', user);
+    user.leagues.pull(lg);
+    user.save();
+    res.status(200).json({ userInputLg: lg, lgFrmUserDb: user.leagues });
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
 // Make a dummy (for testing)
 router.post('/tester', async (req, res, next) => {
   //Create a New Dummy
