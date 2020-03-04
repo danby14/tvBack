@@ -9,8 +9,8 @@ const LeagueSchema = mongoose.Schema(
     // bracketEdits: { type: Array },
     members: [
       {
-        _id: false,
-        id: false,
+        // _id: false,
+        // id: false,
         memberId: [{ type: mongoose.Types.ObjectId, required: true, ref: 'User' }],
         predictions: [{ _id: false, id: false, network: Number, shows: Array }]
       }

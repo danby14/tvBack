@@ -259,8 +259,8 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   res.status(200).json({ league: league.toObject({ getters: true }) });
 });
 
-// delete a league
-router.delete('/test/:lid', async (req, res, next) => {
+// delete a league and leagueId from each user
+router.delete('/removeLeague/:lid', async (req, res, next) => {
   // const lgId = req.params.lid;
   const { leagueName, leagueId, leaguePassword } = req.body;
 
@@ -290,7 +290,9 @@ router.delete('/test/:lid', async (req, res, next) => {
     // return next(error);
   }
 
-  if (league.commissioner[0].id !== req.userData.userId) {
+  const commissionerId = league.commissioner[0].id;
+
+  if (commissionerId !== req.userData.userId) {
     return next(res.status(401).send('Must be league commissioner to delete a league.'));
     // const error = new HttpError('Must be league commissioner to delete a league', 401);
     // return next(error);
@@ -322,6 +324,89 @@ router.delete('/test/:lid', async (req, res, next) => {
   }
 
   res.status(200).json({ message: 'league deleted' });
+});
+
+// Delete an individual user from a league
+router.delete('/removeUser/:lid', async (req, res, next) => {
+  const { leagueName, leagueId, leaguePassword, userToDel } = req.body;
+
+  let league;
+
+  try {
+    league = await League.findById(leagueId)
+      .populate('commissioner', 'username')
+      .populate('members.memberId');
+  } catch (err) {
+    return next(res.status(500).send('Could not find league / Invalid id length'));
+    // const error = new HttpError('Could not find league', 500);
+    // return next(error);
+  }
+
+  if (!league) {
+    return next(res.status(404).send('Could not find league for this id.'));
+    // const error = new HttpError('Could not find league for this id', 404);
+    // return next(error);
+  }
+
+  // console.log('league', league);
+
+  if (league.leagueName !== leagueName) {
+    return next(
+      res.status(401).send('League name must match exactly. Case sensitive and all spaces included')
+    );
+    // const error = new HttpError('Wrong League Name', 401);
+    // return next(error);
+  }
+
+  const commissionerId = league.commissioner[0].id;
+
+  if (commissionerId !== req.userData.userId) {
+    return next(res.status(403).send('Must be league commissioner to remove a user.'));
+    // const error = new HttpError('Must be league commissioner to delete a league', 401);
+    // return next(error);
+  }
+
+  if (league.password !== leaguePassword) {
+    return next(res.status(401).send('Wrong Password'));
+    // const error = new HttpError('Wrong Password', 401);
+    // return next(error);
+  }
+
+  const memberName = league.members.find(({ memberId }) => memberId[0].username === userToDel);
+
+  if (!memberName) {
+    return next(res.status(404).send('User not found'));
+  }
+
+  const foundUserId = memberName.memberId[0].id;
+
+  if (foundUserId === commissionerId) {
+    return next(
+      res
+        .status(405)
+        .send(
+          'Can not remove commissioner from league. Must transfer commissioner duties to another league user or Delete the entire league'
+        )
+    );
+  }
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    const foundMemberId = memberName._id;
+    league.members.pull(foundMemberId); // remove member from league
+    await league.save({ session: sess });
+    memberName.memberId[0].leagues.pull(leagueId); // remove league from user
+    await memberName.memberId[0].save({ session: sess });
+    await sess.commitTransaction();
+  } catch (err) {
+    console.log(err);
+    return next(res.status(500).send({ message: err }));
+    // const error = new HttpError('Could not delete league', 500);
+    // return next(error);
+  }
+
+  res.status(200).json({ message: `${userToDel} removed from league` });
 });
 
 module.exports = router;
