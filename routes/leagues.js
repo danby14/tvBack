@@ -262,7 +262,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
 // delete a league and leagueId from each user
 router.delete('/removeLeague/:lid', async (req, res, next) => {
   // const lgId = req.params.lid;
-  const { leagueName, leagueId, leaguePassword } = req.body;
+  const { leagueName, leagueId, leaguePassword, lidChecker } = req.body;
 
   let league;
 
@@ -302,6 +302,10 @@ router.delete('/removeLeague/:lid', async (req, res, next) => {
     return next(res.status(401).send('Wrong Password'));
     // const error = new HttpError('Wrong Password', 401);
     // return next(error);
+  }
+
+  if (lidChecker !== leagueId) {
+    return next(res.status(401).send(`Can only delete ${lidChecker} from this page.`));
   }
 
   try {
