@@ -24,7 +24,7 @@ router.get('/', async (req, res, next) => {
 
 // Create a league
 router.post('/create', async (req, res, next) => {
-  const { leagueName, password } = req.body;
+  const { leagueName, password, startDate } = req.body;
   //members not used here due to auto using commissioner user id as first member
 
   // Check if league name is taken, when leagueName in model is set to unique:true
@@ -64,15 +64,34 @@ router.post('/create', async (req, res, next) => {
       username: user.username,
       predictions: defaultPredictions
     },
-    // startDate: req.body.startDate,
+    startDate: startDate,
     commissioner: req.userData.userId
     // commissioner: { userId: req.userData.userId, userName: user.username }
   });
+
+  // make sure user entered a date in the future
+  if (new Date(startDate).getTime() <= new Date().getTime()) {
+    return next(
+      res
+        .status(403)
+        .send('Please pick a start date that is in the near future. Past dates are not allowed')
+    );
+  }
 
   if (!user) {
     return next(res.status(404).send('Could not find user for provided id'));
     // const error = new HttpError('Could not find user for provided id', 404);
     // return next(error);
+  }
+
+  if (user.leagues.length >= 2) {
+    return next(
+      res
+        .status(403)
+        .send(
+          'Sorry, the current number of max leagues you can be in is 2. This number will increase each fall before new shows premiere'
+        )
+    );
   }
 
   try {
@@ -140,6 +159,16 @@ router.patch('/:lid', async (req, res, next) => {
     return next(res.status(404).send('Could not find user for provided id.'));
     // const error = new HttpError('Could not find user for provided id', 404);
     // return next(error);
+  }
+
+  if (user.leagues.length >= 2) {
+    return next(
+      res
+        .status(403)
+        .send(
+          'Sorry, the current number of max leagues you can be in is 2. This number will increase each fall before new shows premiere'
+        )
+    );
   }
 
   if (league.members.find(({ memberId }) => memberId[0].toString() === user.id)) {
@@ -327,7 +356,7 @@ router.delete('/removeLeague/:lid', async (req, res, next) => {
     // return next(error);
   }
 
-  res.status(200).json({ message: 'league deleted' });
+  res.status(200).json({ message: 'League Deleted' });
 });
 
 // Delete an individual user from a league
@@ -411,6 +440,46 @@ router.delete('/removeUser/:lid', async (req, res, next) => {
   }
 
   res.status(200).json({ message: `${userToDel} removed from league` });
+});
+
+// Join a league
+router.patch('/:lid/upDate', async (req, res, next) => {
+  const { startDate } = req.body;
+  const { userId } = req.userData;
+  const leagueId = req.params.lid;
+
+  console.log(new Date(startDate).toISOString());
+
+  let league;
+  try {
+    //league has to be the exact length of characters as all other leagues to not catch here
+    league = await League.findById(leagueId);
+  } catch (err) {
+    return next(res.status(500).send('Request failed, possibly due to an inalid id length2'));
+  }
+
+  if (!league) {
+    return next(res.status(404).send('Could not find league for provided id2'));
+  }
+
+  if (userId !== league.commissioner[0].toString()) {
+    return next(res.status(403).send('Must be league commissioner to make this change.'));
+  }
+  console.log(typeof league._id);
+  console.log(typeof leagueId);
+  // updateOne({"_id" : ObjectId(leagueId)}, {$set: { "my_test_key4" : 4}})
+  try {
+    // await league.updateOne({ _id: ObjectId(leagueId) }, { $set: { startDate: startDate } });
+    // console.log('lg strtdt', await league.startDate.updateOne(startDate));
+    league.startDate = startDate;
+    await league.save();
+    console.log('it worked');
+  } catch (err) {
+    res.json({ message: err.message });
+    return next(res.status(500).send('Something went wrong2.'));
+  }
+
+  res.status(200).json({ 'Start date changed to': league.startDate });
 });
 
 module.exports = router;
