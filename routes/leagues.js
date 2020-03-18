@@ -61,7 +61,6 @@ router.post('/create', async (req, res, next) => {
     // bracketEdits: req.body.bracketEdits,
     members: {
       memberId: req.userData.userId,
-      username: user.username,
       predictions: defaultPredictions
     },
     startDate: startDate,
@@ -99,7 +98,6 @@ router.post('/create', async (req, res, next) => {
     sess.startTransaction();
     await createdLeague.save({ session: sess });
     user.leagues.push(createdLeague);
-    // user.leagues.push({ leagueId: createdLeague, leagueName: leagueName });
     await user.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
@@ -188,12 +186,10 @@ router.patch('/:lid', async (req, res, next) => {
     sess.startTransaction();
     league.members.push({
       memberId: userId,
-      // username: user.username,
       predictions: defaultPredictions
     });
     await league.save({ session: sess });
     user.leagues.push(leagueId);
-    // user.leagues.push({ leagueId: leagueId, leagueName: league.leagueName });
     await user.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
@@ -238,7 +234,7 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   try {
     user = await User.findById(userId);
   } catch (err) {
-    const error = new HttpError('Joining league failed, please try again1', 500);
+    const error = new HttpError('Something went wrong', 500);
     return next(error);
   }
 
@@ -248,35 +244,46 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   }
 
   let leagueMember = league.members.find(({ memberId }) => memberId[0].id === user.id);
+  let otherMembers = league.members.filter(({ memberId }) => memberId[0].id !== user.id);
 
   if (!leagueMember) {
     const error = new HttpError('Not a member of this league', 404);
     return next(error);
   }
 
-  // leagueMember.predictions = predictions;
+  // length of shows for current network user just submitted
+  const newLength = predictions.shows.length;
+  // length of shows for first other member that is not the user
+  const prevLength = otherMembers[0].predictions[currentNetwork].shows.length;
+  // difference in length between submitted predictions and other members predictions
+  const difference = newLength - prevLength;
+
+  // console.log('difference', difference);
+
+  // return next(res.status(401).send({ difference }));
 
   try {
-    //check if network is in this members prediction array
-    const checker = leagueMember.predictions.find(({ network }) => network === currentNetwork);
-    if (!checker) {
-      // add individual network predictions if no network found
-      leagueMember.predictions = [...leagueMember.predictions, predictions];
-      // sort networks if predictions were made out of order by user
-      leagueMember.predictions.sort((a, b) => {
-        return a.network - b.network;
-      });
-    } else {
-      //update network predictions if they exist already, by replacing the old ones with an updated copy
-      let predictionsCopy = [...leagueMember.predictions];
-      let filteredDataSource = predictionsCopy.filter(item => {
-        if (item.network === currentNetwork) {
-          item.shows = predictions.shows;
-        }
-        return item;
-      });
-      leagueMember.predictions = filteredDataSource;
+    if (difference > 0) {
+      // new array filled with 0's for other members to concat
+      const addToOthers = Array(difference).fill(0);
+      // Make other members predictions the same length as users submitted predictions if they are not already
+      // const makeLengthsEven = otherMembers.map(member =>
+      await otherMembers.map(
+        member =>
+          (member.predictions[currentNetwork].shows = member.predictions[
+            currentNetwork
+          ].shows.concat(addToOthers))
+      );
     }
+    //update network predictions if they exist already, by replacing the old ones with an updated copy
+    let predictionsCopy = [...leagueMember.predictions];
+    let filteredDataSource = predictionsCopy.filter(item => {
+      if (item.network === currentNetwork) {
+        item.shows = predictions.shows;
+      }
+      return item;
+    });
+    leagueMember.predictions = filteredDataSource;
 
     await league.save();
   } catch (err) {
