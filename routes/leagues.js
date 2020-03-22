@@ -42,7 +42,16 @@ router.post('/create', async (req, res, next) => {
   // give user a default prediction of 0 for all shows in all networks
   // so react doesn't complain about undefined predictions when viewing standings in frontend
   const defaultPredictions = listToUse.networks.map((network, i) => {
-    return { shows: network.shows.map(show => 0), network: i };
+    // return { shows: network.shows.map(show => 0), network: i };
+    return {
+      shows: network.shows.map(show => {
+        if (show.finalResult === 0) {
+          return 0;
+        }
+      }),
+      // .filter(x => x === 0),
+      network: i
+    };
   });
 
   let user;
@@ -65,7 +74,6 @@ router.post('/create', async (req, res, next) => {
     },
     startDate: startDate,
     commissioner: req.userData.userId
-    // commissioner: { userId: req.userData.userId, userName: user.username }
   });
 
   // make sure user entered a date in the future
@@ -83,7 +91,7 @@ router.post('/create', async (req, res, next) => {
     // return next(error);
   }
 
-  if (user.leagues.length >= 2) {
+  if (user.leagues.length >= 5) {
     return next(
       res
         .status(403)
@@ -159,7 +167,7 @@ router.patch('/:lid', async (req, res, next) => {
     // return next(error);
   }
 
-  if (user.leagues.length >= 2) {
+  if (user.leagues.length >= 3) {
     return next(
       res
         .status(403)
@@ -178,7 +186,16 @@ router.patch('/:lid', async (req, res, next) => {
   // give user a default prediction of 0 for all shows in all networks
   // so react doesn't complain about undefined predictions when viewing standings in frontend
   const defaultPredictions = league.members[0].predictions.map((network, i) => {
-    return { shows: network.shows.map(show => 0), network: i };
+    return {
+      shows: network.shows.map(show => {
+        if (show === null) {
+          return null;
+        } else {
+          return 0;
+        }
+      }),
+      network: i
+    };
   });
 
   try {
@@ -251,17 +268,19 @@ router.patch('/:lid/predictions', async (req, res, next) => {
     return next(error);
   }
 
-  // length of shows for current network user just submitted
+  // number of shows user just submitted predictions
   const newLength = predictions.shows.length;
-  // length of shows for first other member that is not the user
-  const prevLength = otherMembers[0].predictions[currentNetwork].shows.length;
+  // number of shows for first other member that is not the user, unless there is only one user
+  let prevLength;
+  if (league.members.length > 1) {
+    prevLength = otherMembers[0].predictions[currentNetwork].shows.length;
+  } else {
+    prevLength = newLength;
+  }
   // difference in length between submitted predictions and other members predictions
   const difference = newLength - prevLength;
 
-  // console.log('difference', difference);
-
-  // return next(res.status(401).send({ difference }));
-
+  // return next(res.status(401).send({ message: predictions, diff: difference }));
   try {
     if (difference > 0) {
       // new array filled with 0's for other members to concat
