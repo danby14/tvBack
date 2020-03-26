@@ -42,14 +42,26 @@ router.post('/create', async (req, res, next) => {
   // give user a default prediction of 0 for all shows in all networks
   // so react doesn't complain about undefined predictions when viewing standings in frontend
   const defaultPredictions = listToUse.networks.map((network, i) => {
-    // return { shows: network.shows.map(show => 0), network: i };
     return {
       shows: network.shows.map(show => {
         if (show.finalResult === 0) {
-          return 0;
+          return '0';
         }
       }),
-      // .filter(x => x === 0),
+      network: i
+    };
+  });
+
+  // give default values for ability to toggle predictions
+  const defaultToggles = listToUse.networks.map((network, i) => {
+    return {
+      shows: network.shows.map(show => {
+        if (show.finalResult === 0) {
+          return true;
+        } else {
+          return false;
+        }
+      }),
       network: i
     };
   });
@@ -67,7 +79,7 @@ router.post('/create', async (req, res, next) => {
     leagueName,
     password,
     listUsed: listToUse.id,
-    // bracketEdits: req.body.bracketEdits,
+    predictionEdits: defaultToggles,
     members: {
       memberId: req.userData.userId,
       predictions: defaultPredictions
@@ -91,7 +103,7 @@ router.post('/create', async (req, res, next) => {
     // return next(error);
   }
 
-  if (user.leagues.length >= 5) {
+  if (user.leagues.length >= 2) {
     return next(
       res
         .status(403)
@@ -167,7 +179,7 @@ router.patch('/:lid', async (req, res, next) => {
     // return next(error);
   }
 
-  if (user.leagues.length >= 3) {
+  if (user.leagues.length >= 2) {
     return next(
       res
         .status(403)
@@ -191,7 +203,7 @@ router.patch('/:lid', async (req, res, next) => {
         if (show === null) {
           return null;
         } else {
-          return 0;
+          return '0';
         }
       }),
       network: i
@@ -280,20 +292,42 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   // difference in length between submitted predictions and other members predictions
   const difference = newLength - prevLength;
 
-  // return next(res.status(401).send({ message: predictions, diff: difference }));
   try {
     if (difference > 0) {
-      // new array filled with 0's for other members to concat
-      const addToOthers = Array(difference).fill(0);
+      // new array filled with 0's or null's for other members to concat
+      let differences = predictions.shows.slice(-difference);
+      const addToOthers = await differences.map(diff => {
+        return diff === null ? null : '0';
+      });
       // Make other members predictions the same length as users submitted predictions if they are not already
-      // const makeLengthsEven = otherMembers.map(member =>
       await otherMembers.map(
         member =>
           (member.predictions[currentNetwork].shows = member.predictions[
             currentNetwork
           ].shows.concat(addToOthers))
       );
+    } else {
+      // to make mid season shows that were added out of order give other users 0's instead of nulls
+      let oldPredictions = leagueMember.predictions[currentNetwork].shows;
+      let newPredictions = predictions.shows;
+      let mismatches = [];
+      oldPredictions.map((show, i) => {
+        if (show === null && newPredictions[i] !== null) {
+          mismatches.push(i);
+        }
+      });
+      if (mismatches.length > 0) {
+        await otherMembers.map(
+          member =>
+            (member.predictions[currentNetwork].shows = member.predictions[
+              currentNetwork
+            ].shows.map((show, i) => {
+              return mismatches.includes(i) ? '0' : show;
+            }))
+        );
+      }
     }
+
     //update network predictions if they exist already, by replacing the old ones with an updated copy
     let predictionsCopy = [...leagueMember.predictions];
     let filteredDataSource = predictionsCopy.filter(item => {
@@ -306,8 +340,8 @@ router.patch('/:lid/predictions', async (req, res, next) => {
 
     await league.save();
   } catch (err) {
-    const error = new HttpError('Something went wrong', 500);
     res.json({ message: err.message });
+    // const error = new HttpError('Something went wrong', 500);
     return next(error);
   }
 
@@ -468,7 +502,7 @@ router.delete('/removeUser/:lid', async (req, res, next) => {
   res.status(200).json({ message: `${userToDel} removed from league` });
 });
 
-// Join a league
+// Change league starting Date
 router.patch('/:lid/upDate', async (req, res, next) => {
   const { startDate } = req.body;
   const { userId } = req.userData;
@@ -493,19 +527,49 @@ router.patch('/:lid/upDate', async (req, res, next) => {
   }
   console.log(typeof league._id);
   console.log(typeof leagueId);
-  // updateOne({"_id" : ObjectId(leagueId)}, {$set: { "my_test_key4" : 4}})
   try {
-    // await league.updateOne({ _id: ObjectId(leagueId) }, { $set: { startDate: startDate } });
-    // console.log('lg strtdt', await league.startDate.updateOne(startDate));
     league.startDate = startDate;
     await league.save();
-    console.log('it worked');
   } catch (err) {
     res.json({ message: err.message });
     return next(res.status(500).send('Something went wrong2.'));
   }
 
   res.status(200).json({ 'Start date changed to': league.startDate });
+});
+
+// update prediction toggles
+router.patch('/:lid/togglePredictions', async (req, res, next) => {
+  const { predictionEdits } = req.body;
+  const { userId } = req.userData;
+  const leagueId = req.params.lid;
+
+  // return next(res.status(500).send('Made it this far'));
+
+  let league;
+  try {
+    //league has to be the exact length of characters as all other leagues to not catch here
+    league = await League.findById(leagueId);
+  } catch (err) {
+    return next(res.status(500).send('Request failed, possibly due to an inalid id length2'));
+  }
+
+  if (!league) {
+    return next(res.status(404).send('Could not find league for provided id2'));
+  }
+
+  if (userId !== league.commissioner[0].toString()) {
+    return next(res.status(403).send('Must be league commissioner to make this change.'));
+  }
+  try {
+    league.predictionEdits = predictionEdits;
+    await league.save();
+  } catch (err) {
+    res.json({ message: err.message });
+    return next(res.status(500).send('Something went wrong2.'));
+  }
+
+  res.status(200).json({ 'Predictions available': league.predictionEdits });
 });
 
 module.exports = router;

@@ -6,7 +6,7 @@ const LeagueSchema = mongoose.Schema(
     leagueName: { type: String, required: true, unique: false },
     password: { type: String, required: true, minlength: 6 },
     listUsed: { type: String, required: true },
-    // bracketEdits: { type: Array },
+    predictionEdits: [{ _id: false, id: false, network: Number, shows: Array }],
     members: [
       {
         memberId: [{ type: mongoose.Types.ObjectId, required: true, ref: 'User' }],
