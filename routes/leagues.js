@@ -502,45 +502,9 @@ router.delete('/removeUser/:lid', async (req, res, next) => {
   res.status(200).json({ message: `${userToDel} removed from league` });
 });
 
-// Change league starting Date
-router.patch('/:lid/upDate', async (req, res, next) => {
-  const { startDate } = req.body;
-  const { userId } = req.userData;
-  const leagueId = req.params.lid;
-
-  console.log(new Date(startDate).toISOString());
-
-  let league;
-  try {
-    //league has to be the exact length of characters as all other leagues to not catch here
-    league = await League.findById(leagueId);
-  } catch (err) {
-    return next(res.status(500).send('Request failed, possibly due to an inalid id length2'));
-  }
-
-  if (!league) {
-    return next(res.status(404).send('Could not find league for provided id2'));
-  }
-
-  if (userId !== league.commissioner[0].toString()) {
-    return next(res.status(403).send('Must be league commissioner to make this change.'));
-  }
-  console.log(typeof league._id);
-  console.log(typeof leagueId);
-  try {
-    league.startDate = startDate;
-    await league.save();
-  } catch (err) {
-    res.json({ message: err.message });
-    return next(res.status(500).send('Something went wrong2.'));
-  }
-
-  res.status(200).json({ 'Start date changed to': league.startDate });
-});
-
-// update prediction toggles
+// update prediction toggles and date
 router.patch('/:lid/togglePredictions', async (req, res, next) => {
-  const { predictionEdits } = req.body;
+  const { startDate, predictionEdits } = req.body;
   const { userId } = req.userData;
   const leagueId = req.params.lid;
 
@@ -563,13 +527,17 @@ router.patch('/:lid/togglePredictions', async (req, res, next) => {
   }
   try {
     league.predictionEdits = predictionEdits;
+    league.startDate = startDate;
     await league.save();
   } catch (err) {
     res.json({ message: err.message });
     return next(res.status(500).send('Something went wrong2.'));
   }
 
-  res.status(200).json({ 'Predictions available': league.predictionEdits });
+  res.status(200).json({
+    'Predictions available': league.predictionEdits,
+    'Make predictions by': league.startDate
+  });
 });
 
 module.exports = router;
