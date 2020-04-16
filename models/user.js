@@ -9,7 +9,8 @@ const UserSchema = mongoose.Schema(
     gender: { type: String, required: true, enum: ['M', 'F', 'O', 'N/A'] },
     optIn: { type: Boolean, required: true },
     leagues: [{ type: mongoose.Types.ObjectId, required: true, ref: 'League' }],
-    leagueHistory: [{}] // (2018) Test League 1: 7th Place, (2019) Test League 1: 4th Place
+    tokenVersion: { type: Number, default: 0 },
+    // leagueHistory: [{}] // (2018) Test League 1: 7th Place, (2019) Test League 1: 4th Place
   },
   { timestamps: true }
 );
