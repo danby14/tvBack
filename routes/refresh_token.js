@@ -20,7 +20,8 @@ router.post('/', async (req, res) => {
   }
 
   //token is valid and we can send back an access token
-  const user = await User.findOne({ id: payload.userId });
+  // User.findById(userId)
+  const user = await User.findById({ _id: payload.userId });
 
   //Check if user is already in the database
   if (!user) {
@@ -33,7 +34,12 @@ router.post('/', async (req, res) => {
 
   sendRefreshToken(res, createRefreshToken(user));
 
-  return res.send({ ok: true, accessToken: createAccessToken(user) });
+  return res.send({
+    ok: true,
+    userId: user._id,
+    username: user.username,
+    accessToken: createAccessToken(user),
+  });
 });
 
 module.exports = router;

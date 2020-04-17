@@ -48,7 +48,7 @@ router.post('/create', async (req, res, next) => {
           return '0';
         }
       }),
-      network: i
+      network: i,
     };
   });
 
@@ -62,7 +62,7 @@ router.post('/create', async (req, res, next) => {
           return false;
         }
       }),
-      network: i
+      network: i,
     };
   });
 
@@ -82,10 +82,10 @@ router.post('/create', async (req, res, next) => {
     predictionEdits: defaultToggles,
     members: {
       memberId: req.userData.userId,
-      predictions: defaultPredictions
+      predictions: defaultPredictions,
     },
     startDate: startDate,
-    commissioner: req.userData.userId
+    commissioner: req.userData.userId,
   });
 
   // make sure user entered a date in the future
@@ -206,7 +206,7 @@ router.patch('/:lid', async (req, res, next) => {
           return '0';
         }
       }),
-      network: i
+      network: i,
     };
   });
 
@@ -215,7 +215,7 @@ router.patch('/:lid', async (req, res, next) => {
     sess.startTransaction();
     league.members.push({
       memberId: userId,
-      predictions: defaultPredictions
+      predictions: defaultPredictions,
     });
     await league.save({ session: sess });
     user.leagues.push(leagueId);
@@ -536,7 +536,7 @@ router.patch('/:lid/togglePredictions', async (req, res, next) => {
 
   res.status(200).json({
     'Predictions available': league.predictionEdits,
-    'Make predictions by': league.startDate
+    'Make predictions by': league.startDate,
   });
 });
 
