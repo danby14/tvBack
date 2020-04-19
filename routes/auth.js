@@ -1,9 +1,11 @@
 const router = require('express').Router();
 const User = require('../models/user');
 const Dummy = require('../models/dummy');
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../validation');
+const { createAccessToken, createRefreshToken } = require('../shared/makeTokens');
+const { sendRefreshToken } = require('../shared/sendRefreshToken');
 
 router.post('/register', async (req, res) => {
   //Lets Validate the Data Before We Create a New User
@@ -30,7 +32,7 @@ router.post('/register', async (req, res) => {
     password: hashedPassword,
     birthdate: req.body.birthdate,
     gender: req.body.gender,
-    optIn: req.body.optIn
+    optIn: req.body.optIn,
   });
   try {
     // const savedUser = await user.save();
@@ -40,22 +42,18 @@ router.post('/register', async (req, res) => {
     res.status(400).send(err);
   }
 
-  //Create and assign a jwt
-  let token;
-  try {
-    token = jwt.sign({ user: user.id, username: user.username }, process.env.TOKEN_SECRET, {
-      expiresIn: '1h'
-    });
-  } catch (err) {
-    console.log(err);
-  }
+  //Create and assign jwt access token
+  let accessToken = createAccessToken(user);
+
+  //Create and assign jwt refresh token
+  let refreshToken = createRefreshToken(user);
 
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
-    token: token,
-    leagues: user.leagues
+    token: accessToken,
+    leagues: user.leagues,
   });
 });
 
@@ -72,15 +70,20 @@ router.post('/login', async (req, res) => {
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return res.status(400).send('Invalid username or password');
 
-  //Create and assign a jwt
-  let token;
-  try {
-    token = jwt.sign({ user: user.id, username: user.username }, process.env.TOKEN_SECRET, {
-      expiresIn: '1h'
-    });
-  } catch (err) {
-    console.log(err);
-  }
+  //Create and assign a jwt as access token
+  let accessToken = createAccessToken(user);
+
+  //Create and assign a jwt as refresh token
+  let refreshToken = createRefreshToken(user);
+
+  sendRefreshToken(res, refreshToken);
+
+  // res.cookie('tvrt', 'test1', {
+  // res.cookie('tvrt', refreshToken, {
+  //   expires: new Date(Date.now() + 168 * 3600000), // cookie will be removed after 7 days,
+  //   httpOnly: true,
+  //   path: '/',
+  // });
 
   // res.header('auth-token', token).send({ token });
   // console.log(res);
@@ -88,9 +91,14 @@ router.post('/login', async (req, res) => {
     user: user.id,
     email: user.email,
     username: user.username,
-    token: token,
-    leagues: user.leagues
+    token: accessToken,
+    leagues: user.leagues,
   });
+});
+//Logout
+router.get('/logout', async (req, res) => {
+  res.clearCookie('tvrt', { path: '/refresh_token' });
+  res.status(201).json('logged out');
 });
 
 //Get back all Users
@@ -107,9 +115,7 @@ router.get('/register', async (req, res) => {
 router.get('/:uid', async (req, res, next) => {
   const userId = req.params.uid;
   try {
-    const user = await User.findById(userId)
-      .select('-password')
-      .populate('leagues');
+    const user = await User.findById(userId).select('-password').populate('leagues');
     res.json(user);
   } catch (err) {
     res.json({ message: err });
@@ -157,7 +163,7 @@ router.post('/tester', async (req, res, next) => {
   const dummy = new Dummy({
     name: req.body.name,
     userId: req.body.userId,
-    leagues: req.body.leagues
+    leagues: req.body.leagues,
   });
   try {
     await dummy.save();
@@ -169,7 +175,7 @@ router.post('/tester', async (req, res, next) => {
     dummy: dummy.id,
     name: dummy.name,
     user: dummy.userId,
-    leagues: dummy.leagues
+    leagues: dummy.leagues,
   });
 });
 
