@@ -48,6 +48,8 @@ router.post('/register', async (req, res) => {
   //Create and assign jwt refresh token
   let refreshToken = createRefreshToken(user);
 
+  sendRefreshToken(res, refreshToken);
+
   res.status(201).json({
     user: user.id,
     email: user.email,
@@ -78,15 +80,6 @@ router.post('/login', async (req, res) => {
 
   sendRefreshToken(res, refreshToken);
 
-  // res.cookie('tvrt', 'test1', {
-  // res.cookie('tvrt', refreshToken, {
-  //   expires: new Date(Date.now() + 168 * 3600000), // cookie will be removed after 7 days,
-  //   httpOnly: true,
-  //   path: '/',
-  // });
-
-  // res.header('auth-token', token).send({ token });
-  // console.log(res);
   res.status(201).json({
     user: user.id,
     email: user.email,
@@ -95,6 +88,7 @@ router.post('/login', async (req, res) => {
     leagues: user.leagues,
   });
 });
+
 //Logout
 router.get('/logout', async (req, res) => {
   res.clearCookie('tvrt', { path: '/refresh_token' });
