@@ -4,8 +4,13 @@ const Dummy = require('../models/dummy');
 // const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../validation');
-const { createAccessToken, createRefreshToken } = require('../shared/makeTokens');
+const {
+  createAccessToken,
+  createRefreshToken,
+  createConfirmationEmailToken,
+} = require('../shared/makeTokens');
 const { sendRefreshToken } = require('../shared/sendRefreshToken');
+const { sendConfirmationEmail } = require('../shared/sendConfirmationEmail');
 
 router.post('/register', async (req, res) => {
   //Lets Validate the Data Before We Create a New User
@@ -25,6 +30,8 @@ router.post('/register', async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
+  let emailToken = createConfirmationEmailToken(req.body.email);
+
   //Create a New User
   const user = new User({
     username: req.body.username,
@@ -33,30 +40,42 @@ router.post('/register', async (req, res) => {
     birthdate: req.body.birthdate,
     gender: req.body.gender,
     optIn: req.body.optIn,
+    tempToken: emailToken,
   });
   try {
-    // const savedUser = await user.save();
     await user.save();
-    // res.send({ user: user._id });
   } catch (err) {
     res.status(400).send(err);
   }
 
-  //Create and assign jwt access token
-  let accessToken = createAccessToken(user);
+  // send email verification link
+  try {
+    await sendConfirmationEmail(user, emailToken);
+  } catch (err) {
+    console.log(err);
+  }
 
-  //Create and assign jwt refresh token
-  let refreshToken = createRefreshToken(user);
+  // Create and assign jwt access token
+  // let accessToken = createAccessToken(user);
 
-  sendRefreshToken(res, refreshToken);
+  // Create and assign jwt refresh token
+  // let refreshToken = createRefreshToken(user);
+
+  // sendRefreshToken(res, refreshToken);
 
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
-    token: accessToken,
-    leagues: user.leagues,
+    msg: 'Please check your email to confirm your email address.',
   });
+  // res.status(201).json({
+  //   user: user.id,
+  //   email: user.email,
+  //   username: user.username,
+  //   token: accessToken,
+  //   leagues: user.leagues,
+  // });
 });
 
 //Login
@@ -68,9 +87,13 @@ router.post('/login', async (req, res) => {
   //Check if user is already in the database
   const user = await User.findOne({ email: req.body.email });
   if (!user) return res.status(400).send('Incorrect username or password');
+
   //Password check
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return res.status(400).send('Invalid username or password');
+
+  // check if email is confirmed
+  if (!user.confirmed) return res.status(400).send('Email not verified!');
 
   //Create and assign a jwt as access token
   let accessToken = createAccessToken(user);

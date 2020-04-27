@@ -24,6 +24,7 @@ const refreshTokenRoute = require('./routes/refresh_token');
 const leaguesRoute = require('./routes/leagues');
 const networksRoute = require('./routes/networks');
 const monthlyListsRoute = require('./routes/monthlyLists');
+const emailRoute = require('./routes/email');
 
 //Route Middlewares
 app.use('/user', authRoute);
@@ -32,6 +33,7 @@ app.use('/refresh_token', refreshTokenRoute);
 app.use('/leagues', leaguesRoute);
 app.use('/networks', networksRoute);
 app.use('/monthlyLists', monthlyListsRoute);
+app.use('/email', emailRoute);
 
 //ROUTES
 app.get('/', (req, res) => {
