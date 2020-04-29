@@ -11,18 +11,17 @@ const sendConfirmationEmail = (user, emailToken) => {
     html: `Confirmation Email <a href=${url}>${url}</a>`,
   };
 
-  // uncomment below code to send above email template after registering
-  // (async () => {
-  //   try {
-  //     await sgMail.send(msg);
-  //   } catch (error) {
-  //     console.error(error);
+  (async () => {
+    try {
+      await sgMail.send(msg);
+    } catch (error) {
+      console.error(error);
 
-  //     if (error.response) {
-  //       console.error(error.response.body);
-  //     }
-  //   }
-  // })();
+      if (error.response) {
+        console.error(error.response.body);
+      }
+    }
+  })();
 };
 
 exports.sendConfirmationEmail = sendConfirmationEmail;

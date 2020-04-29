@@ -2,15 +2,18 @@ const router = require('express').Router();
 const User = require('../models/user');
 const Dummy = require('../models/dummy');
 // const jwt = require('jsonwebtoken');
+const { verify } = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../validation');
 const {
   createAccessToken,
   createRefreshToken,
+  createPasswordResetToken,
   createConfirmationEmailToken,
 } = require('../shared/makeTokens');
 const { sendRefreshToken } = require('../shared/sendRefreshToken');
 const { sendConfirmationEmail } = require('../shared/sendConfirmationEmail');
+const { sendPasswordResetEmail } = require('../shared/sendPasswordResetEmail');
 
 router.post('/register', async (req, res) => {
   //Lets Validate the Data Before We Create a New User
@@ -55,27 +58,12 @@ router.post('/register', async (req, res) => {
     console.log(err);
   }
 
-  // Create and assign jwt access token
-  // let accessToken = createAccessToken(user);
-
-  // Create and assign jwt refresh token
-  // let refreshToken = createRefreshToken(user);
-
-  // sendRefreshToken(res, refreshToken);
-
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
     msg: 'Please check your email to confirm your email address.',
   });
-  // res.status(201).json({
-  //   user: user.id,
-  //   email: user.email,
-  //   username: user.username,
-  //   token: accessToken,
-  //   leagues: user.leagues,
-  // });
 });
 
 //Login
@@ -116,6 +104,89 @@ router.post('/login', async (req, res) => {
 router.get('/logout', async (req, res) => {
   res.clearCookie('tvrt', { path: '/refresh_token' });
   res.status(201).json('logged out');
+});
+
+// forgot password, send reset email
+router.post('/resetPassword', async (req, res) => {
+  // get user email
+  const { email } = req.body;
+
+  // add some more validation here so request does not get easily abused. repeatedly.
+
+  //Check if user is in the database
+  const user = await User.findOne({ email: email });
+  if (!user) return res.status(400).send('Invalid request');
+
+  // check if email is confirmed
+  if (!user.confirmed)
+    return res.status(400).send('Please verify email associated with account before trying again');
+
+  // make token
+  const resetToken = createPasswordResetToken(user);
+  // increase token version to invalidate old tokens
+  try {
+    user.tokenVersion = user.tokenVersion += 1;
+    user.tempToken = resetToken;
+    await user.save();
+  } catch (err) {
+    res.status(400).send(err);
+  }
+
+  // try {
+  //   await sendPasswordResetEmail(user, resetToken);
+  // } catch (err) {
+  //   res.status(400).send(err);
+  // }
+
+  res.status(201).json({
+    msg: 'An email with instructions on how to reset your password should arrive shortly.',
+  });
+});
+
+// use token from email link to create new password.
+router.post('/changePassword', async (req, res) => {
+  const { token, password } = req.body;
+
+  if (!token) {
+    return res.status(400).send('Invalid request');
+  }
+
+  if (password.length < 6) return res.status(400).send('Password must be at least 6 characters');
+
+  // validate token and get email from verify
+  let payload = null;
+  try {
+    payload = verify(token, process.env.PASSWORD_RESET_TOKEN_SECRET);
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(400)
+      .send('make sure link is exactly copied over from email or try to reset again');
+  }
+
+  // token is valid and use userId stored in token
+  const user = await User.findById(payload.userId);
+
+  // make sure email from token links to an existing user
+  if (!user) return res.status(400).send('User does not exist');
+
+  // check if the user has already completed this proccess, and end it if they have
+  if (user.tempToken !== token) return res.status(400).send('token already used');
+
+  // hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  // save new password
+  try {
+    user.password = hashedPassword;
+    user.tempToken = 'used';
+    await user.save();
+  } catch (err) {
+    console.log(err);
+  }
+
+  res.status(200).send({ msg: 'Password successfully updated' });
 });
 
 //Get back all Users

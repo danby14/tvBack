@@ -1,16 +1,13 @@
 const router = require('express').Router();
-const sgMail = require('@sendgrid/mail');
 const { verify } = require('jsonwebtoken');
 
 const User = require('../models/user');
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/verify', async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
-    return res.send({ msg: 'invalid request' });
+    return res.status(400).send('Invalid request');
   }
 
   // validate token and get email from verify
@@ -19,15 +16,18 @@ router.post('/verify', async (req, res) => {
     payload = verify(token, process.env.CONFIRMATION_EMAIL_TOKEN_SECRET);
   } catch (err) {
     console.log(err);
-    return res.send({ msg: 'make sure link is exactly copied over or try confirming email again' });
+    return res
+      .status(400)
+      .send('make sure link is exactly copied over or try confirming email again');
   }
 
-  // token is valid and we can send back an access token
+  // token is valid and use email stored in token to find a user in database
   const user = await User.findOne({ email: payload.email });
 
-  // Make sure email from token links to a real User
+  // make sure email from token links to an existing user
   if (!user) return res.status(400).send('User does not exist');
 
+  // check if the user has already completed this proccess, and end it if they have
   if (user.tempToken !== token) return res.status(400).send('token already used');
 
   // Make user confirmed to be true
@@ -43,30 +43,5 @@ router.post('/verify', async (req, res) => {
     msg: 'Email confirmed. You may now login.',
   });
 });
-
-// this was a test, real email verification is in auth register
-// router.post('/', (req, res) => {
-//   const msg = {
-//     to: 'dan.buenger@gmail.com',
-//     from: 'dan.buenger@gmail.com',
-//     subject: 'Sending with Twilio SendGrid is Fun',
-//     text: 'and not easy to do anywhere, even with Node.js',
-//     html: '<strong>and easy to do anywhere, even with Node.js</strong>',
-//   };
-
-//   //ES8
-//   (async () => {
-//     try {
-//       await sgMail.send(msg);
-//     } catch (error) {
-//       console.error(error);
-
-//       if (error.response) {
-//         console.error(error.response.body);
-//       }
-//     }
-//   })();
-//   res.send({ msg: msg });
-// });
 
 module.exports = router;

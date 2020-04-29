@@ -16,6 +16,10 @@ const createRefreshToken = user => {
   );
 };
 
+const createPasswordResetToken = user => {
+  return sign({ userId: user.id }, process.env.PASSWORD_RESET_TOKEN_SECRET, { expiresIn: '7d' });
+};
+
 const createConfirmationEmailToken = email => {
   return sign({ email: email }, process.env.CONFIRMATION_EMAIL_TOKEN_SECRET, {
     expiresIn: '7d',
@@ -24,4 +28,5 @@ const createConfirmationEmailToken = email => {
 
 exports.createAccessToken = createAccessToken;
 exports.createRefreshToken = createRefreshToken;
+exports.createPasswordResetToken = createPasswordResetToken;
 exports.createConfirmationEmailToken = createConfirmationEmailToken;
