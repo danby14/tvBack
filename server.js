@@ -14,6 +14,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: 'http://localhost:3000',
+    // origin: 'http://192.168.1.126:3000', for testing site from network devices
     credentials: true,
   })
 );

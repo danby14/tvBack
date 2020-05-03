@@ -51,18 +51,22 @@ router.post('/register', async (req, res) => {
     res.status(400).send(err);
   }
 
+  // for testing without sending an email.
+  console.log(`http://localhost:3000/auth/verify/${emailToken}`);
+
   // send email verification link
-  try {
-    await sendConfirmationEmail(user, emailToken);
-  } catch (err) {
-    console.log(err);
-  }
+  // try {
+  //   await sendConfirmationEmail(user, emailToken);
+  // } catch (err) {
+  //   console.log(err);
+  // }
 
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
-    msg: 'Please check your email to confirm your email address.',
+    msg:
+      'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
 });
 
@@ -132,6 +136,9 @@ router.post('/resetPassword', async (req, res) => {
     res.status(400).send(err);
   }
 
+  // for testing without wasting emails: comment out this sendPasswordResetEmail
+  // console.log(`http://localhost:3000/auth/change/${resetToken}`);
+
   // try {
   //   await sendPasswordResetEmail(user, resetToken);
   // } catch (err) {
@@ -171,7 +178,12 @@ router.post('/changePassword', async (req, res) => {
   if (!user) return res.status(400).send('User does not exist');
 
   // check if the user has already completed this proccess, and end it if they have
-  if (user.tempToken !== token) return res.status(400).send('token already used');
+  if (user.tempToken !== token)
+    return res
+      .status(400)
+      .send(
+        'Make sure link from password reset email exactly matches link in address bar. If it does match, please try requesting a new link'
+      );
 
   // hash password
   const salt = await bcrypt.genSalt(10);
@@ -264,6 +276,43 @@ router.post('/tester', async (req, res, next) => {
     name: dummy.name,
     user: dummy.userId,
     leagues: dummy.leagues,
+  });
+});
+
+// Resend verify email link to user
+router.post('/resendConfirmation', async (req, res, next) => {
+  const { email } = req.body;
+  //Check if user is in the database
+  const user = await User.findOne({ email: email });
+  if (!user) return res.status(401).send('Invalid request');
+
+  // check if email is already confirmed
+  if (user.confirmed) return res.status(405).send('Email has already been confirmed');
+
+  // make token
+  let emailToken = createConfirmationEmailToken(email);
+
+  // send email
+  // try {
+  //   await sendConfirmationEmail(user, emailToken);
+  // } catch (err) {
+  //   console.log(err);
+  // }
+
+  // add token to user
+  try {
+    user.tempToken = emailToken;
+    await user.save();
+  } catch (err) {
+    res.status(400).send(err);
+  }
+
+  // for testing without sending an email.
+  console.log(`http://localhost:3000/auth/verify/${emailToken}`);
+
+  res.status(200).json({
+    msg:
+      'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
 });
 

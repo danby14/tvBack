@@ -28,7 +28,10 @@ router.post('/verify', async (req, res) => {
   if (!user) return res.status(400).send('User does not exist');
 
   // check if the user has already completed this proccess, and end it if they have
-  if (user.tempToken !== token) return res.status(400).send('token already used');
+  if (user.tempToken !== token)
+    return res
+      .status(403)
+      .send('expired request, please use most recent email sent or request a new one.');
 
   // Make user confirmed to be true
   try {
@@ -40,7 +43,7 @@ router.post('/verify', async (req, res) => {
   }
 
   return res.send({
-    msg: 'Email confirmed. You may now login.',
+    msg: 'Email confirmed. You may now sign in.',
   });
 });
 
