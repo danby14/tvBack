@@ -1,9 +1,19 @@
 const router = require('express').Router();
 const User = require('../models/user');
 const Dummy = require('../models/dummy');
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
+const { verify } = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../validation');
+const {
+  createAccessToken,
+  createRefreshToken,
+  createPasswordResetToken,
+  createConfirmationEmailToken,
+} = require('../shared/makeTokens');
+const { sendRefreshToken } = require('../shared/sendRefreshToken');
+const { sendConfirmationEmail } = require('../shared/sendConfirmationEmail');
+const { sendPasswordResetEmail } = require('../shared/sendPasswordResetEmail');
 
 router.post('/register', async (req, res) => {
   //Lets Validate the Data Before We Create a New User
@@ -23,6 +33,8 @@ router.post('/register', async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
+  let emailToken = createConfirmationEmailToken(req.body.email);
+
   //Create a New User
   const user = new User({
     username: req.body.username,
@@ -30,32 +42,31 @@ router.post('/register', async (req, res) => {
     password: hashedPassword,
     birthdate: req.body.birthdate,
     gender: req.body.gender,
-    optIn: req.body.optIn
+    optIn: req.body.optIn,
+    tempToken: emailToken,
   });
   try {
-    // const savedUser = await user.save();
     await user.save();
-    // res.send({ user: user._id });
   } catch (err) {
     res.status(400).send(err);
   }
 
-  //Create and assign a jwt
-  let token;
-  try {
-    token = jwt.sign({ user: user.id, username: user.username }, process.env.TOKEN_SECRET, {
-      expiresIn: '1h'
-    });
-  } catch (err) {
-    console.log(err);
-  }
+  // for testing without sending an email.
+  console.log(`http://localhost:3000/auth/verify/${emailToken}`);
+
+  // send email verification link
+  // try {
+  //   await sendConfirmationEmail(user, emailToken);
+  // } catch (err) {
+  //   console.log(err);
+  // }
 
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
-    token: token,
-    leagues: user.leagues
+    msg:
+      'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
 });
 
@@ -68,29 +79,126 @@ router.post('/login', async (req, res) => {
   //Check if user is already in the database
   const user = await User.findOne({ email: req.body.email });
   if (!user) return res.status(400).send('Incorrect username or password');
+
   //Password check
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return res.status(400).send('Invalid username or password');
 
-  //Create and assign a jwt
-  let token;
-  try {
-    token = jwt.sign({ user: user.id, username: user.username }, process.env.TOKEN_SECRET, {
-      expiresIn: '1h'
-    });
-  } catch (err) {
-    console.log(err);
-  }
+  // check if email is confirmed
+  if (!user.confirmed) return res.status(400).send('Email not verified!');
 
-  // res.header('auth-token', token).send({ token });
-  // console.log(res);
+  //Create and assign a jwt as access token
+  let accessToken = createAccessToken(user);
+
+  //Create and assign a jwt as refresh token
+  let refreshToken = createRefreshToken(user);
+
+  sendRefreshToken(res, refreshToken);
+
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
-    token: token,
-    leagues: user.leagues
+    token: accessToken,
+    leagues: user.leagues,
   });
+});
+
+//Logout
+router.get('/logout', async (req, res) => {
+  res.clearCookie('tvrt', { path: '/refresh_token' });
+  res.status(201).json('logged out');
+});
+
+// forgot password, send reset email
+router.post('/resetPassword', async (req, res) => {
+  // get user email
+  const { email } = req.body;
+
+  // add some more validation here so request does not get easily abused. repeatedly.
+
+  //Check if user is in the database
+  const user = await User.findOne({ email: email });
+  if (!user) return res.status(400).send('Invalid request');
+
+  // check if email is confirmed
+  if (!user.confirmed)
+    return res.status(400).send('Please verify email associated with account before trying again');
+
+  // make token
+  const resetToken = createPasswordResetToken(user);
+  // increase token version to invalidate old tokens
+  try {
+    user.tokenVersion = user.tokenVersion += 1;
+    user.tempToken = resetToken;
+    await user.save();
+  } catch (err) {
+    res.status(400).send(err);
+  }
+
+  // for testing without wasting emails: comment out this sendPasswordResetEmail
+  // console.log(`http://localhost:3000/auth/change/${resetToken}`);
+
+  // try {
+  //   await sendPasswordResetEmail(user, resetToken);
+  // } catch (err) {
+  //   res.status(400).send(err);
+  // }
+
+  res.status(201).json({
+    msg: 'An email with instructions on how to reset your password should arrive shortly.',
+  });
+});
+
+// use token from email link to create new password.
+router.post('/changePassword', async (req, res) => {
+  const { token, password } = req.body;
+
+  if (!token) {
+    return res.status(400).send('Invalid request');
+  }
+
+  if (password.length < 6) return res.status(400).send('Password must be at least 6 characters');
+
+  // validate token and get email from verify
+  let payload = null;
+  try {
+    payload = verify(token, process.env.PASSWORD_RESET_TOKEN_SECRET);
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(400)
+      .send('make sure link is exactly copied over from email or try to reset again');
+  }
+
+  // token is valid and use userId stored in token
+  const user = await User.findById(payload.userId);
+
+  // make sure email from token links to an existing user
+  if (!user) return res.status(400).send('User does not exist');
+
+  // check if the user has already completed this proccess, and end it if they have
+  if (user.tempToken !== token)
+    return res
+      .status(400)
+      .send(
+        'Make sure link from password reset email exactly matches link in address bar. If it does match, please try requesting a new link'
+      );
+
+  // hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  // save new password
+  try {
+    user.password = hashedPassword;
+    user.tempToken = 'used';
+    await user.save();
+  } catch (err) {
+    console.log(err);
+  }
+
+  res.status(200).send({ msg: 'Password successfully updated' });
 });
 
 //Get back all Users
@@ -107,9 +215,7 @@ router.get('/register', async (req, res) => {
 router.get('/:uid', async (req, res, next) => {
   const userId = req.params.uid;
   try {
-    const user = await User.findById(userId)
-      .select('-password')
-      .populate('leagues');
+    const user = await User.findById(userId).select('-password').populate('leagues');
     res.json(user);
   } catch (err) {
     res.json({ message: err });
@@ -157,7 +263,7 @@ router.post('/tester', async (req, res, next) => {
   const dummy = new Dummy({
     name: req.body.name,
     userId: req.body.userId,
-    leagues: req.body.leagues
+    leagues: req.body.leagues,
   });
   try {
     await dummy.save();
@@ -169,7 +275,44 @@ router.post('/tester', async (req, res, next) => {
     dummy: dummy.id,
     name: dummy.name,
     user: dummy.userId,
-    leagues: dummy.leagues
+    leagues: dummy.leagues,
+  });
+});
+
+// Resend verify email link to user
+router.post('/resendConfirmation', async (req, res, next) => {
+  const { email } = req.body;
+  //Check if user is in the database
+  const user = await User.findOne({ email: email });
+  if (!user) return res.status(401).send('Invalid request');
+
+  // check if email is already confirmed
+  if (user.confirmed) return res.status(405).send('Email has already been confirmed');
+
+  // make token
+  let emailToken = createConfirmationEmailToken(email);
+
+  // send email
+  // try {
+  //   await sendConfirmationEmail(user, emailToken);
+  // } catch (err) {
+  //   console.log(err);
+  // }
+
+  // add token to user
+  try {
+    user.tempToken = emailToken;
+    await user.save();
+  } catch (err) {
+    res.status(400).send(err);
+  }
+
+  // for testing without sending an email.
+  console.log(`http://localhost:3000/auth/verify/${emailToken}`);
+
+  res.status(200).json({
+    msg:
+      'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
 });
 

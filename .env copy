@@ -1,2 +1,6 @@
 DB_CONNECTION=mongodb+srv://USERNAME:PASSWORD@COLLECTION_NAME_GOES_HERE.mongodb.net/db0?retryWrites=true&w=majority
-TOKEN_SECRET = CHANGE_this_TO_some_TOKEN_you_LIKE
+ACCESS_TOKEN_SECRET = PickAToken
+REFRESH_TOKEN_SECRET = PickASecondToken
+CONFIRMATION_EMAIL_TOKEN_SECRET = PickAThirdToken
+PASSWORD_RESET_TOKEN_SECRET = PickAFourthToken
+SENDGRID_API_KEY = getAPIkeyFromSendgridWebsite/GiveItPermissionsToSend/AddAVerifiedSender/PutAPIKeyHere
