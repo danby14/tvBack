@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 mongoose.set('useCreateIndex', true);
 const cookieParser = require('cookie-parser');
 // const cors = require('cors');
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 //Middlewares
 app.use(express.urlencoded({ extended: true }));

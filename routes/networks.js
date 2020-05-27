@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Network = require('../models/Network');
+const Network = require('../models/network');
 
 //Get back all the networks
 router.get('/', async (req, res) => {
@@ -17,7 +17,7 @@ router.post('/new', async (req, res) => {
   const { network, shows } = req.body;
   const newNetwork = new Network({
     network: network,
-    shows: shows
+    shows: shows,
   });
 
   try {
