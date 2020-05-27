@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Network = require('../models/Network');
+const Network = require('../models/network');
 const MonthlyList = require('../models/monthlyList');
 
 //Get back all the networks
@@ -60,7 +60,7 @@ router.post('/autoUpdate', async (req, res) => {
   }
 
   const monthlyList = new MonthlyList({
-    networks: networks
+    networks: networks,
   });
   try {
     await monthlyList.save();
