@@ -38,7 +38,11 @@ app.use('/email', emailRoute);
 
 //ROUTES
 app.get('/', (req, res) => {
-  res.send('we are on home');
+  res.send('we are on home, tv-predictions');
+});
+
+app.get('/stuff', (req, res) => {
+  res.send('this was a test');
 });
 
 //Connect to MongoDB Atlas Using Mongoose and Hide Login Credentials using DOTENV
