@@ -5,19 +5,19 @@ require('dotenv/config');
 const mongoose = require('mongoose');
 mongoose.set('useCreateIndex', true);
 const cookieParser = require('cookie-parser');
-// const cors = require('cors');
+const cors = require('cors');
 const port = process.env.PORT || 5000;
 
 //Middlewares
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-// app.use(
-//   cors({
-//     origin: 'http://localhost:3000',
-//     // origin: 'http://192.168.1.126:3000', for testing site from network devices
-//     credentials: true,
-//   })
-// );
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+    // origin: 'http://192.168.1.126:3000', for testing site from network devices
+    credentials: true,
+  })
+);
 
 //Import Routes
 const authRoute = require('./routes/auth');
