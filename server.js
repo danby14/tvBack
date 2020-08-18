@@ -4,20 +4,26 @@ const app = express();
 require('dotenv/config');
 const mongoose = require('mongoose');
 mongoose.set('useCreateIndex', true);
-const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const port = process.env.PORT || 5000;
+const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
+const helmet = require('helmet');
+
+const port = process.env.PORT || 5001;
 
 //Middlewares
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(helmet());
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
 app.use(
   cors({
-    origin: 'http://localhost:3000',
-    // origin: 'http://192.168.1.126:3000', for testing site from network devices
+    origin: `${CORS_ORIGIN}`,
     credentials: true,
   })
 );
+
+app.use(morgan('common'));
 
 //Import Routes
 const authRoute = require('./routes/auth');

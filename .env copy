@@ -4,3 +4,4 @@ REFRESH_TOKEN_SECRET = PickASecondToken
 CONFIRMATION_EMAIL_TOKEN_SECRET = PickAThirdToken
 PASSWORD_RESET_TOKEN_SECRET = PickAFourthToken
 SENDGRID_API_KEY = getAPIkeyFromSendgridWebsite/GiveItPermissionsToSend/AddAVerifiedSender/PutAPIKeyHere
+CORS_ORIGIN = http://localhost:3000
