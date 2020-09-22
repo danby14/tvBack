@@ -12,6 +12,7 @@ const UserSchema = mongoose.Schema(
     leagues: [{ type: mongoose.Types.ObjectId, required: true, ref: 'League' }],
     tempToken: { type: String, required: true },
     tokenVersion: { type: Number, default: 0 },
+    role: { type: String, enum: ['admin', 'moderator', 'user'], default: 'user' },
     // leagueHistory: [{}] // (2018) Test League 1: 7th Place, (2019) Test League 1: 4th Place
   },
   { timestamps: true }

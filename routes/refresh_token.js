@@ -7,6 +7,7 @@ const User = require('../models/user');
 
 router.post('/', async (req, res) => {
   const token = req.cookies.tvrt;
+
   if (!token) {
     return res.send({ ok: false, accessToken: '' });
   }

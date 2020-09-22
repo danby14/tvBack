@@ -12,16 +12,6 @@ const verifyToken = require('../middleware/verifyToken');
 // require authorization
 router.use(verifyToken);
 
-// Get list of all leagues (for testing)
-router.get('/', async (req, res, next) => {
-  try {
-    const leagues = await League.find();
-    res.json(leagues);
-  } catch (err) {
-    res.json({ message: err });
-  }
-});
-
 // Create a league
 router.post('/create', async (req, res, next) => {
   const { leagueName, password, startDate } = req.body;
@@ -348,6 +338,17 @@ router.patch('/:lid/predictions', async (req, res, next) => {
   res.status(200).json({ league: league.toObject({ getters: true }) });
 });
 
+// Get list of all leagues per user
+router.get('/:uid/leagues', async (req, res, next) => {
+  const userId = req.params.uid;
+  try {
+    const user = await User.findById(userId).populate('leagues');
+    res.json(user.leagues);
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
 // delete a league and leagueId from each user
 router.delete('/removeLeague/:lid', async (req, res, next) => {
   // const lgId = req.params.lid;
@@ -538,6 +539,55 @@ router.patch('/:lid/togglePredictions', async (req, res, next) => {
     'Predictions available': league.predictionEdits,
     'Make predictions by': league.startDate,
   });
+});
+
+// let commissioner change league password
+router.patch('/:lid/changePassword', async (req, res, next) => {
+  const { oldPassword, newPassword } = req.body;
+  const { userId } = req.userData;
+  const leagueId = req.params.lid;
+
+  let league;
+
+  try {
+    league = await League.findById(leagueId).populate('commissioner', 'username');
+  } catch (err) {
+    return next(res.status(500).send('Could not find league / Invalid id length'));
+  }
+
+  if (!league) {
+    return next(res.status(404).send('Could not find league for this id.'));
+  }
+
+  const commissionerId = league.commissioner[0].id;
+
+  if (commissionerId !== userId) {
+    return next(res.status(403).send('Must be league commissioner to change league password.'));
+  }
+
+  if (league.password !== oldPassword) {
+    return next(res.status(401).send('Wrong old Password'));
+  }
+
+  try {
+    league.password = newPassword; // update league password
+    await league.save();
+  } catch (err) {
+    console.log(err);
+    return next(res.status(500).send({ message: err }));
+  }
+
+  res.status(200).json({ message: 'league password updated successfully' });
+});
+
+// Get list of all leagues (for testing)
+router.get('/', async (req, res, next) => {
+  try {
+    const leagues = await League.find();
+    res.json(leagues);
+  } catch (err) {
+    res.json({ message: err });
+  }
 });
 
 module.exports = router;

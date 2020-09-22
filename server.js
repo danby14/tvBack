@@ -32,6 +32,7 @@ const leaguesRoute = require('./routes/leagues');
 const networksRoute = require('./routes/networks');
 const monthlyListsRoute = require('./routes/monthlyLists');
 const emailRoute = require('./routes/email');
+const adminRoute = require('./routes/admin');
 
 //Route Middlewares
 app.use('/user', authRoute);
@@ -41,14 +42,11 @@ app.use('/leagues', leaguesRoute);
 app.use('/networks', networksRoute);
 app.use('/monthlyLists', monthlyListsRoute);
 app.use('/email', emailRoute);
+app.use('/admin', adminRoute);
 
 //ROUTES
 app.get('/', (req, res) => {
   res.send('we are on home, tv-predictions');
-});
-
-app.get('/stuff', (req, res) => {
-  res.send('this was a test');
 });
 
 //Connect to MongoDB Atlas Using Mongoose and Hide Login Credentials using DOTENV

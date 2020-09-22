@@ -1,6 +1,5 @@
 const router = require('express').Router();
 const User = require('../models/user');
-const Dummy = require('../models/dummy');
 // const jwt = require('jsonwebtoken');
 const { verify } = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -92,6 +91,8 @@ router.post('/login', async (req, res) => {
 
   //Create and assign a jwt as refresh token
   let refreshToken = createRefreshToken(user);
+
+  console.log('refreshToken', refreshToken);
 
   sendRefreshToken(res, refreshToken);
 
@@ -201,38 +202,6 @@ router.post('/changePassword', async (req, res) => {
   res.status(200).send({ msg: 'Password successfully updated' });
 });
 
-//Get back all Users
-router.get('/register', async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json(users);
-  } catch (err) {
-    res.json({ message: err });
-  }
-});
-
-// Get list of all leagues per user (for testing)
-router.get('/:uid', async (req, res, next) => {
-  const userId = req.params.uid;
-  try {
-    const user = await User.findById(userId).select('-password').populate('leagues');
-    res.json(user);
-  } catch (err) {
-    res.json({ message: err });
-  }
-});
-
-// Get list of all leagues per user (for testing)
-router.get('/:uid/leagues', async (req, res, next) => {
-  const userId = req.params.uid;
-  try {
-    const user = await User.findById(userId).populate('leagues');
-    res.json(user.leagues);
-  } catch (err) {
-    res.json({ message: err });
-  }
-});
-
 // Delete a league from a user (for testing)
 router.delete('/:uid/leagues/remove', async (req, res, next) => {
   const userId = req.params.uid;
@@ -255,28 +224,6 @@ router.delete('/:uid/leagues/remove', async (req, res, next) => {
   } catch (err) {
     res.json({ message: err });
   }
-});
-
-// Make a dummy (for testing)
-router.post('/tester', async (req, res, next) => {
-  //Create a New Dummy
-  const dummy = new Dummy({
-    name: req.body.name,
-    userId: req.body.userId,
-    leagues: req.body.leagues,
-  });
-  try {
-    await dummy.save();
-  } catch (err) {
-    res.status(400).send(err);
-  }
-
-  res.status(201).json({
-    dummy: dummy.id,
-    name: dummy.name,
-    user: dummy.userId,
-    leagues: dummy.leagues,
-  });
 });
 
 // Resend verify email link to user
@@ -314,18 +261,6 @@ router.post('/resendConfirmation', async (req, res, next) => {
     msg:
       'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
-});
-
-// Get list of dummys with league info populated (for testing)
-router.get('/tester/:did', async (req, res, next) => {
-  const dummyId = req.params.did;
-  try {
-    const dummy = await Dummy.findById(dummyId);
-    // const dummy = await Dummy.findById(dummyId).populate('leagues');
-    res.json(dummy);
-  } catch (err) {
-    res.json({ message: err });
-  }
 });
 
 module.exports = router;
