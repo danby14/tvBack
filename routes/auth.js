@@ -14,6 +14,8 @@ const { sendRefreshToken } = require('../shared/sendRefreshToken');
 const { sendConfirmationEmail } = require('../shared/sendConfirmationEmail');
 const { sendPasswordResetEmail } = require('../shared/sendPasswordResetEmail');
 
+const verifyToken = require('../middleware/verifyToken');
+
 router.post('/register', async (req, res) => {
   //Lets Validate the Data Before We Create a New User
   const { error } = registerValidation(req.body);
@@ -261,6 +263,20 @@ router.post('/resendConfirmation', async (req, res, next) => {
     msg:
       'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
+});
+
+// require token and admin access
+router.use(verifyToken);
+
+// Get a user by id
+router.get('/:uid', async (req, res, next) => {
+  const userId = req.params.uid;
+  try {
+    const user = await User.findById(userId).select('-password').populate('leagues');
+    res.json(user);
+  } catch (err) {
+    res.json({ message: err });
+  }
 });
 
 module.exports = router;

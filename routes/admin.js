@@ -52,15 +52,4 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// Get list of all leagues per user (for testing)
-router.get('/:uid', async (req, res, next) => {
-  const userId = req.params.uid;
-  try {
-    const user = await User.findById(userId).select('-password').populate('leagues');
-    res.json(user);
-  } catch (err) {
-    res.json({ message: err });
-  }
-});
-
 module.exports = router;
