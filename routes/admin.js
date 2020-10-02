@@ -32,8 +32,6 @@ router.use(hasRole('admin'));
 //Get back all messages from contact us form
 router.get('/messages', async (req, res) => {
   const { userId, role } = req.userData;
-  console.log(userId);
-  console.log(role);
   try {
     const messages = await Message.find();
     res.json(messages);
