@@ -1,6 +1,5 @@
 const router = require('express').Router();
 const User = require('../models/user');
-// const jwt = require('jsonwebtoken');
 const { verify } = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { registerValidation, loginValidation } = require('../validation');
@@ -53,21 +52,21 @@ router.post('/register', async (req, res) => {
   }
 
   // for testing without sending an email.
-  console.log(`http://localhost:3000/auth/verify/${emailToken}`);
+  // console.log(`http://localhost:3000/auth/verify/${emailToken}`);
 
   // send email verification link
-  // try {
-  //   await sendConfirmationEmail(user, emailToken);
-  // } catch (err) {
-  //   console.log(err);
-  // }
+  try {
+    await sendConfirmationEmail(user, emailToken);
+  } catch (err) {
+    console.log(err);
+  }
 
   res.status(201).json({
     user: user.id,
     email: user.email,
     username: user.username,
     msg:
-      'Email sent. Please check your email and follow the link provided before attempting to sign in.',
+      'Verification email sent. Please check your email and follow the link provided before attempting to sign in. Thank you.',
   });
 });
 
@@ -93,8 +92,6 @@ router.post('/login', async (req, res) => {
 
   //Create and assign a jwt as refresh token
   let refreshToken = createRefreshToken(user);
-
-  console.log('refreshToken', refreshToken);
 
   sendRefreshToken(res, refreshToken);
 
@@ -142,11 +139,11 @@ router.post('/resetPassword', async (req, res) => {
   // for testing without wasting emails: comment out this sendPasswordResetEmail
   // console.log(`http://localhost:3000/auth/change/${resetToken}`);
 
-  // try {
-  //   await sendPasswordResetEmail(user, resetToken);
-  // } catch (err) {
-  //   res.status(400).send(err);
-  // }
+  try {
+    await sendPasswordResetEmail(user, resetToken);
+  } catch (err) {
+    res.status(400).send(err);
+  }
 
   res.status(201).json({
     msg: 'An email with instructions on how to reset your password should arrive shortly.',
@@ -204,30 +201,6 @@ router.post('/changePassword', async (req, res) => {
   res.status(200).send({ msg: 'Password successfully updated' });
 });
 
-// Delete a league from a user (for testing)
-router.delete('/:uid/leagues/remove', async (req, res, next) => {
-  const userId = req.params.uid;
-  const { lg } = req.body;
-
-  let user;
-  try {
-    user = await User.findById(userId);
-    // res.status(200).json({ userInputLg: lg, lgFrmUserDb: user.leagues });
-    // res.json(user.leagues);
-  } catch (err) {
-    res.json({ message: err });
-  }
-
-  try {
-    // console.log('user', user);
-    user.leagues.pull(lg);
-    user.save();
-    res.status(200).json({ userInputLg: lg, lgFrmUserDb: user.leagues });
-  } catch (err) {
-    res.json({ message: err });
-  }
-});
-
 // Resend verify email link to user
 router.post('/resendConfirmation', async (req, res, next) => {
   const { email } = req.body;
@@ -242,11 +215,11 @@ router.post('/resendConfirmation', async (req, res, next) => {
   let emailToken = createConfirmationEmailToken(email);
 
   // send email
-  // try {
-  //   await sendConfirmationEmail(user, emailToken);
-  // } catch (err) {
-  //   console.log(err);
-  // }
+  try {
+    await sendConfirmationEmail(user, emailToken);
+  } catch (err) {
+    console.log(err);
+  }
 
   // add token to user
   try {
@@ -257,7 +230,7 @@ router.post('/resendConfirmation', async (req, res, next) => {
   }
 
   // for testing without sending an email.
-  console.log(`http://localhost:3000/auth/verify/${emailToken}`);
+  // console.log(`http://localhost:3000/auth/verify/${emailToken}`);
 
   res.status(200).json({
     msg:

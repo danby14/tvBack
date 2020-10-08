@@ -6,7 +6,7 @@ const User = require('../models/user');
 const verifyToken = require('../middleware/verifyToken');
 const hasRole = require('../middleware/hasRole');
 
-//Send a message through contact us
+//Send a message through contact us (not currently using this, switched to zoho via nodemailer in email route)
 router.post('/contact', async (req, res) => {
   const { reason, name, email, subject, message } = req.body;
   const newMessage = new Message({

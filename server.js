@@ -43,10 +43,13 @@ app.use('/networks', networksRoute);
 app.use('/monthlyLists', monthlyListsRoute);
 app.use('/email', emailRoute);
 app.use('/admin', adminRoute);
+app.use(function (err, req, res, next) {
+  res.status(500).send(err);
+});
 
 //ROUTES
 app.get('/', (req, res) => {
-  res.send('we are on home, tv-predictions');
+  res.send('©PredictTV');
 });
 
 //Connect to MongoDB Atlas Using Mongoose and Hide Login Credentials using DOTENV

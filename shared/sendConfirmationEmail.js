@@ -2,13 +2,13 @@ const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendConfirmationEmail = (user, emailToken) => {
-  const url = `http://localhost:3000/auth/verify/${emailToken}`;
-
   const msg = {
     to: `${user.email}`,
-    from: 'dan.buenger@gmail.com',
-    subject: 'Confirmation Email',
-    html: `Confirmation Email <a href=${url}>${url}</a>`,
+    from: { email: 'support@predicttv.com', name: 'PredictTV Support' },
+    templateId: 'd-52e8be4bc13c4e5cb6dfcb33b4dac55e',
+    dynamic_template_data: {
+      emailToken: emailToken,
+    },
   };
 
   (async () => {

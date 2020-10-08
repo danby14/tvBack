@@ -8,6 +8,7 @@ const League = require('../models/league');
 const User = require('../models/user');
 const List = require('../models/monthlyList');
 const verifyToken = require('../middleware/verifyToken');
+const hasRole = require('../middleware/hasRole');
 
 // require authorization
 router.use(verifyToken);
@@ -579,6 +580,8 @@ router.patch('/:lid/changePassword', async (req, res, next) => {
 
   res.status(200).json({ message: 'league password updated successfully' });
 });
+
+router.use(hasRole('admin'));
 
 // Get list of all leagues (for testing)
 router.get('/', async (req, res, next) => {

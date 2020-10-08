@@ -1,8 +1,10 @@
 const router = require('express').Router();
 const { verify } = require('jsonwebtoken');
+const nodeMailer = require('nodemailer');
 
 const User = require('../models/user');
 
+// after user clicks on link in verfication email sent to them
 router.post('/verify', async (req, res) => {
   const { token } = req.body;
 
@@ -44,6 +46,45 @@ router.post('/verify', async (req, res) => {
 
   return res.send({
     msg: 'Email confirmed. You may now sign in.',
+  });
+});
+
+// contact form - nodemailer with zoho
+router.post('/contact', async (req, res, next) => {
+  const { reason, email, username, subject, message } = req.body;
+  const zohoUsername = process.env.ZOHO_USERNAME;
+  const zohoPassword = process.env.ZOHO_PASSWORD;
+
+  let transporter = nodeMailer.createTransport({
+    host: 'smtp.zoho.com',
+    secure: true,
+    port: 465,
+    auth: {
+      user: zohoUsername,
+      pass: zohoPassword,
+    },
+  });
+
+  const mailOptions = {
+    from: 'noreply@predicttv.com', // sender address
+    to: 'support@predicttv.com',
+    replyTo: `${email}`,
+    subject: `Contact form - ${reason}`, // Subject line
+    html: `<h3>Email: </h3><p>${email}</p>
+    <h3>Username: </h3><p>${username}</p>
+    <h3>Subject: </h3><p>${subject}</p>
+    <h3>Message: </h3><p>${message}</p>`,
+  };
+
+  await transporter.sendMail(mailOptions, function (err, info) {
+    if (err) {
+      console.log(err.response);
+      return next({ msg: 'Something went wrong. Please try again later.' });
+    } else {
+      return res.send({
+        msg: 'Message sent. Thank you.',
+      });
+    }
   });
 });
 

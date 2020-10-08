@@ -3,7 +3,10 @@ const router = express.Router();
 const Network = require('../models/network');
 const MonthlyList = require('../models/monthlyList');
 
-//Get back all the networks
+const verifyToken = require('../middleware/verifyToken');
+const hasRole = require('../middleware/hasRole');
+
+//Get back all the monthly lists
 router.get('/', async (req, res) => {
   try {
     const networks = await MonthlyList.find();
@@ -13,7 +16,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-//Get back all the networks
+//Get back a specific monthly list by list id
 router.get('/:lid', async (req, res) => {
   const listId = req.params.lid;
   try {
@@ -23,6 +26,10 @@ router.get('/:lid', async (req, res) => {
     res.json({ message: err });
   }
 });
+
+// require token and admin access
+router.use(verifyToken);
+router.use(hasRole('admin'));
 
 //Add new show to a monthly list
 router.patch('/:lid/addShow', async (req, res, next) => {
@@ -50,7 +57,7 @@ router.patch('/:lid/addShow', async (req, res, next) => {
   }
 });
 
-//Submit an Updated List of Networks Automatically
+//Submit an Updated List of Networks Automatically (only use at beginning of season, after all the networks are updated)
 router.post('/autoUpdate', async (req, res) => {
   let networks;
   try {
