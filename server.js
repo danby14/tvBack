@@ -44,7 +44,8 @@ app.use('/monthlyLists', monthlyListsRoute);
 app.use('/email', emailRoute);
 app.use('/admin', adminRoute);
 app.use(function (err, req, res, next) {
-  res.status(500).send(err);
+  console.log('next err', err);
+  res.status(500).json('something went wrong');
 });
 
 //ROUTES

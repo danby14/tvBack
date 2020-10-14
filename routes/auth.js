@@ -10,7 +10,8 @@ const {
   createConfirmationEmailToken,
 } = require('../shared/makeTokens');
 const { sendRefreshToken } = require('../shared/sendRefreshToken');
-const { sendConfirmationEmail } = require('../shared/sendConfirmationEmail');
+const { sendgridConfirmationEmail } = require('../shared/sendgridConfirmationEmail');
+const { sesConfirmationEmail } = require('../shared/sesConfirmationEmail');
 const { sendPasswordResetEmail } = require('../shared/sendPasswordResetEmail');
 
 const verifyToken = require('../middleware/verifyToken');
@@ -45,29 +46,21 @@ router.post('/register', async (req, res) => {
     optIn: req.body.optIn,
     tempToken: emailToken,
   });
+
+  // send email verification link with sendgrid (100/day max)
+  // try {
+  //   await sendgridConfirmationEmail(user, emailToken);
+  // } catch (err) {
+  //   console.log(err);
+  // }
+
+  // send email verification link with SES(Amazon) 1200/day
   try {
-    await user.save();
+    // sends email and saves user to db
+    await sesConfirmationEmail(req, res, user, emailToken);
   } catch (err) {
     res.status(400).send(err);
   }
-
-  // for testing without sending an email.
-  // console.log(`http://localhost:3000/auth/verify/${emailToken}`);
-
-  // send email verification link
-  try {
-    await sendConfirmationEmail(user, emailToken);
-  } catch (err) {
-    console.log(err);
-  }
-
-  res.status(201).json({
-    user: user.id,
-    email: user.email,
-    username: user.username,
-    msg:
-      'Verification email sent. Please check your email and follow the link provided before attempting to sign in. Thank you.',
-  });
 });
 
 //Login
@@ -214,9 +207,9 @@ router.post('/resendConfirmation', async (req, res, next) => {
   // make token
   let emailToken = createConfirmationEmailToken(email);
 
-  // send email
+  // send email w/sendgrid
   try {
-    await sendConfirmationEmail(user, emailToken);
+    await sendgridConfirmationEmail(user, emailToken);
   } catch (err) {
     console.log(err);
   }

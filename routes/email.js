@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { verify } = require('jsonwebtoken');
 const nodeMailer = require('nodemailer');
+const { sendZohoTest } = require('../shared/sendZohoTest');
 
 const User = require('../models/user');
 
@@ -79,13 +80,20 @@ router.post('/contact', async (req, res, next) => {
   await transporter.sendMail(mailOptions, function (err, info) {
     if (err) {
       console.log(err.response);
-      return next({ msg: 'Something went wrong. Please try again later.' });
+      res.status(err.responseCode).json({
+        msg: 'Something went wrong. Please try again later.',
+      });
     } else {
-      return res.send({
+      console.log(info.envelope);
+      return res.json({
         msg: 'Message sent. Thank you.',
       });
     }
   });
+});
+
+router.post('/zht', async (req, res) => {
+  await sendZohoTest(req, res);
 });
 
 module.exports = router;

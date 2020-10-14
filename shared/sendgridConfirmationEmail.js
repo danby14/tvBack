@@ -1,7 +1,7 @@
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const sendConfirmationEmail = (user, emailToken) => {
+const sendgridConfirmationEmail = (user, emailToken) => {
   const msg = {
     to: `${user.email}`,
     from: { email: 'support@predicttv.com', name: 'PredictTV Support' },
@@ -24,4 +24,4 @@ const sendConfirmationEmail = (user, emailToken) => {
   })();
 };
 
-exports.sendConfirmationEmail = sendConfirmationEmail;
+exports.sendgridConfirmationEmail = sendgridConfirmationEmail;

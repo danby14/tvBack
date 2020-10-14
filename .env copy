@@ -9,3 +9,6 @@ CORS_ORIGIN = http://localhost:3000
 CORS_ORIGIN_LIVE = WebsiteAddressGoesHere
 ZOHO_USERNAME=emailHere
 ZOHO_PASSWORD=passwordHere
+SES_ACCESS_KEY=iamID,
+SES_SECRET_KEY=iamPass,
+SES_REGION=region,
