@@ -99,7 +99,7 @@ router.post('/login', async (req, res) => {
 
 //Logout
 router.get('/logout', async (req, res) => {
-  res.clearCookie('tvrt', { path: '/refresh_token' });
+  res.clearCookie('tvrt', { domain: 'tv.danby.me', path: '/refresh_token' });
   res.status(201).json('logged out');
 });
 
