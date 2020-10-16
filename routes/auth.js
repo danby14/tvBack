@@ -99,7 +99,12 @@ router.post('/login', async (req, res) => {
 
 //Logout
 router.post('/logout', async (req, res) => {
-  res.clearCookie('tvrt', { path: '/refresh_token' });
+  res.clearCookie('tvrt', {
+    httpOnly: true,
+    path: '/refresh_token',
+    sameSite: 'none',
+    secure: true,
+  });
   res.status(201).json('logged out');
 });
 
