@@ -293,9 +293,8 @@ router.patch('/:lid/predictions', async (req, res, next) => {
       // Make other members predictions the same length as users submitted predictions if they are not already
       await otherMembers.map(
         member =>
-          (member.predictions[currentNetwork].shows = member.predictions[
-            currentNetwork
-          ].shows.concat(addToOthers))
+          (member.predictions[currentNetwork].shows =
+            member.predictions[currentNetwork].shows.concat(addToOthers))
       );
     } else {
       // to make mid season shows that were added out of order give other users 0's instead of nulls

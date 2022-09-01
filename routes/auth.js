@@ -68,18 +68,21 @@ router.post('/login', async (req, res) => {
   //Lets Validate the Data Before We Login
   const { error } = loginValidation(req.body);
   if (error) return res.status(400).send(error.details[0].message);
-
+  console.log('one');
   //Check if user is already in the database
   const user = await User.findOne({ email: req.body.email });
   if (!user) return res.status(400).send('Incorrect username or password');
 
+  console.log('two');
   //Password check
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return res.status(400).send('Invalid username or password');
 
+  console.log('three');
   // check if email is confirmed
   if (!user.confirmed) return res.status(400).send('Email not verified!');
 
+  console.log('four');
   //Create and assign a jwt as access token
   let accessToken = createAccessToken(user);
 
@@ -231,8 +234,7 @@ router.post('/resendConfirmation', async (req, res, next) => {
   // console.log(`http://localhost:3000/auth/verify/${emailToken}`);
 
   res.status(200).json({
-    msg:
-      'Email sent. Please check your email and follow the link provided before attempting to sign in.',
+    msg: 'Email sent. Please check your email and follow the link provided before attempting to sign in.',
   });
 });
 

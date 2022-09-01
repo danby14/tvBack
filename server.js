@@ -3,7 +3,6 @@ const express = require('express');
 const app = express();
 require('dotenv/config');
 const mongoose = require('mongoose');
-mongoose.set('useCreateIndex', true);
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
@@ -54,11 +53,17 @@ app.get('/', (req, res) => {
 });
 
 //Connect to MongoDB Atlas Using Mongoose and Hide Login Credentials using DOTENV
-mongoose.connect(
-  process.env.DB_CONNECTION,
-  { useUnifiedTopology: true, useNewUrlParser: true },
-  () => console.log('connected to mongo atlas')
-);
+async function main() {
+  try {
+    await mongoose.connect(process.env.DB_CONNECTION, {}, () =>
+      console.log('connected to mongo atlas')
+    );
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+main();
 
 //Where we listen for server
 app.listen(port, () => console.log(`server listening on port ${port}!`));
